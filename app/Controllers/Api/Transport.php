@@ -2,11 +2,12 @@
 
 namespace App\Controllers\Api;
 
-use App\Controllers\BaseController;
+use CodeIgniter\RESTful\ResourceController;
 
-class Transport extends BaseController{
+class Transport extends ResourceController{
 
     public function index(){
+        
         return 'ini transport';
     }
 }
