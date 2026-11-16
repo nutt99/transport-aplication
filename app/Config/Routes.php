@@ -9,5 +9,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
 
     $routes->group('transport', function($routes){
         $routes->get('transports', 'Transport::index');
+        $routes->get('kota', 'Transport::kota');
+        $routes->get('tarif', 'Transport::tarif');
     });
 });
