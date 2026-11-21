@@ -28,7 +28,7 @@ class Transport extends ResourceController
 
     /**
      * GET /api/transport/kota
-     * Mengambil daftar seluruh kota untuk dropdown asal / tujuan
+     * Mengambil daftar seluruh titik lokasi (bandara, stasiun, terminal) untuk dropdown asal / tujuan
      */
     public function kota()
     {
@@ -43,20 +43,22 @@ class Transport extends ResourceController
 
     /**
      * GET /api/transport/tarif
-     * Menghitung jarak dan rincian tarif transportasi antar kota
+     * Menghitung jarak dan rincian tarif transportasi berdasarkan rute & jam berangkat
      * Parameter (query string):
-     * - id_asal & id_tujuan (integer ID kota)
-     * - ATAU asal & tujuan (nama kota, misal: ?asal=Jakarta&tujuan=Bandung)
+     * - id_asal & id_tujuan (integer ID lokasi)
+     * - ATAU asal & tujuan (nama lokasi, misal: ?asal=Kualanamu&tujuan=Soekarno-Hatta)
+     * - jam (opsional, format HH:MM, misal: ?jam=08:30)
      */
     public function tarif()
     {
         $kotaModel   = new KotaModel();
         $jadwalModel = new JadwalModel();
 
-        $idAsal   = $this->request->getGet('id_asal');
-        $idTujuan = $this->request->getGet('id_tujuan');
-        $asal     = $this->request->getGet('asal');
-        $tujuan   = $this->request->getGet('tujuan');
+        $idAsal       = $this->request->getGet('id_asal');
+        $idTujuan     = $this->request->getGet('id_tujuan');
+        $asal         = $this->request->getGet('asal');
+        $tujuan       = $this->request->getGet('tujuan');
+        $jamBerangkat = $this->request->getGet('jam');
 
         $kotaAsal = null;
         if (!empty($idAsal)) {
@@ -73,15 +75,15 @@ class Transport extends ResourceController
         }
 
         if (!$kotaAsal) {
-            return $this->failNotFound('Kota asal tidak ditemukan. Masukkan parameter "id_asal" atau "asal" yang valid.');
+            return $this->failNotFound('Lokasi asal tidak ditemukan. Masukkan parameter "id_asal" atau "asal" yang valid.');
         }
 
         if (!$kotaTujuan) {
-            return $this->failNotFound('Kota tujuan tidak ditemukan. Masukkan parameter "id_tujuan" atau "tujuan" yang valid.');
+            return $this->failNotFound('Lokasi tujuan tidak ditemukan. Masukkan parameter "id_tujuan" atau "tujuan" yang valid.');
         }
 
         if ($kotaAsal['id'] === $kotaTujuan['id']) {
-            return $this->failValidationErrors('Kota asal dan kota tujuan tidak boleh sama.');
+            return $this->failValidationErrors('Lokasi asal dan tujuan tidak boleh sama.');
         }
 
         $jarakKm = $this->hitungJarakKm(
@@ -95,20 +97,42 @@ class Transport extends ResourceController
 
         $hasilPilihan = [];
         foreach ($jadwalList as $j) {
+            // Filter berdasarkan jam berangkat jika parameter 'jam' dikirim
+            if (!empty($jamBerangkat)) {
+                $waktuInput = strtotime($jamBerangkat);
+                $waktuMulai = strtotime($j['start_hours']);
+                $waktuAkhir = strtotime($j['ended_hours']);
+
+                if ($waktuInput !== false) {
+                    if ($waktuAkhir < $waktuMulai) {
+                        // Rentang lintas tengah malam (misal 22:00 - 04:00)
+                        if ($waktuInput < $waktuMulai && $waktuInput > $waktuAkhir) {
+                            continue;
+                        }
+                    } else {
+                        if ($waktuInput < $waktuMulai || $waktuInput > $waktuAkhir) {
+                            continue;
+                        }
+                    }
+                }
+            }
+
             $tarifPerKm    = (float)$j['tarif_per_km'];
             $estimasiTarif = round($jarakKm * $tarifPerKm, -2);
-            $durasi        = $this->hitungDurasi($j['start_hours'], $j['ended_hours']);
 
             $hasilPilihan[] = [
                 'id_jadwal'             => (int)$j['id'],
                 'penyedia'              => $j['nama_penyedia'],
                 'jenis_transport'       => $j['jenis_transport'],
-                'jam_berlaku'           => $j['start_hours'] . ' - ' . $j['ended_hours'],
+                'jam_berlaku'           => substr($j['start_hours'], 0, 5) . ' - ' . substr($j['ended_hours'], 0, 5),
                 'tarif_per_km'          => $tarifPerKm,
                 'estimasi_tarif'        => (int)$estimasiTarif,
                 'estimasi_tarif_format' => 'Rp ' . number_format($estimasiTarif, 0, ',', '.'),
             ];
         }
+
+        // Urutkan otomatis dari estimasi tarif termurah
+        usort($hasilPilihan, fn($a, $b) => $a['estimasi_tarif'] <=> $b['estimasi_tarif']);
 
         return $this->respond([
             'status' => 'success',
@@ -126,7 +150,8 @@ class Transport extends ResourceController
                         'latitude'  => (float)$kotaTujuan['latitude'],
                         'longitude' => (float)$kotaTujuan['longitude'],
                     ],
-                    'jarak_km' => $jarakKm,
+                    'jarak_km'      => $jarakKm,
+                    'jam_berangkat' => !empty($jamBerangkat) ? $jamBerangkat : null,
                 ],
                 'total_jadwal_tersedia' => count($hasilPilihan),
                 'pilihan_transportasi'  => $hasilPilihan,
@@ -153,27 +178,5 @@ class Transport extends ResourceController
             cos($latFrom) * cos($latTo) * pow(sin($lonDelta / 2), 2)));
 
         return round($angle * $earthRadius, 2);
-    }
-
-    private function hitungDurasi(string $start, string $ended): string
-    {
-        $t1 = strtotime($start);
-        $t2 = strtotime($ended);
-
-        if ($t2 < $t1) {
-            $t2 += 24 * 3600;
-        }
-
-        $diffMinutes = (int)round(($t2 - $t1) / 60);
-        $hours       = floor($diffMinutes / 60);
-        $minutes     = $diffMinutes % 60;
-
-        if ($hours > 0 && $minutes > 0) {
-            return "{$hours} Jam {$minutes} Menit";
-        } elseif ($hours > 0) {
-            return "{$hours} Jam";
-        }
-
-        return "{$minutes} Menit";
     }
 }

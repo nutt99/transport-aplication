@@ -9,6 +9,9 @@ class KotaSeeder extends Seeder
     public function run()
     {
         $data = [
+            // ==========================================
+            // BANDARA UTAMA INDONESIA (27)
+            // ==========================================
             [
                 'nama_kota' => 'Banda Aceh - Bandara Sultan Iskandar Muda (BTJ)',
                 'latitude'  => 5.523522,
@@ -146,7 +149,7 @@ class KotaSeeder extends Seeder
             ],
 
             // ==========================================
-            // STASIUN KERETA API (SUMATRA)
+            // STASIUN KERETA API SUMATRA (15)
             // ==========================================
             [
                 'nama_kota' => 'Medan - Stasiun Medan (MDN)',
@@ -225,7 +228,7 @@ class KotaSeeder extends Seeder
             ],
 
             // ==========================================
-            // TERMINAL BUS UTAMA (SUMATRA)
+            // TERMINAL BUS UTAMA SUMATRA (15)
             // ==========================================
             [
                 'nama_kota' => 'Banda Aceh - Terminal Batoh',
