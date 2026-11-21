@@ -303,7 +303,7 @@ class KotaSeeder extends Seeder
             [
                 'nama_kota' => 'Bandar Lampung - Terminal Rajabasa',
                 'latitude'  => -5.365278,
-                'longitude' => 105.235833,
+                'longitude' => 105.235833,  
             ],
         ];
 
