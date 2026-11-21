@@ -100,13 +100,13 @@ class Transport extends ResourceController
             $durasi        = $this->hitungDurasi($j['start_hours'], $j['ended_hours']);
 
             $hasilPilihan[] = [
-                'id_jadwal'            => (int)$j['id'],
-                'penyedia'             => $j['nama_penyedia'],
-                'jenis_transport'      => $j['jenis_transport'],
-                'durasi'               => $durasi,
-                'tarif_per_km'         => $tarifPerKm,
-                'estimasi_tarif'       => (int)$estimasiTarif,
-                'estimasi_tarif_format'=> 'Rp ' . number_format($estimasiTarif, 0, ',', '.'),
+                'id_jadwal'             => (int)$j['id'],
+                'penyedia'              => $j['nama_penyedia'],
+                'jenis_transport'       => $j['jenis_transport'],
+                'jam_berlaku'           => $j['start_hours'] . ' - ' . $j['ended_hours'],
+                'tarif_per_km'          => $tarifPerKm,
+                'estimasi_tarif'        => (int)$estimasiTarif,
+                'estimasi_tarif_format' => 'Rp ' . number_format($estimasiTarif, 0, ',', '.'),
             ];
         }
 
