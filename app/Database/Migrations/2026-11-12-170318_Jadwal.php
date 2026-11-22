@@ -16,11 +16,11 @@ class Jadwal extends Migration
             'id_penyedia' => [
                 'type' => 'INT',
             ],
-            'id_kota_asal' => [
+            'id_lokasi_asal' => [
                 'type' => 'INT',
                 'null' => true,
             ],
-            'id_kota_tujuan' => [
+            'id_lokasi_tujuan' => [
                 'type' => 'INT',
                 'null' => true,
             ],
@@ -40,8 +40,8 @@ class Jadwal extends Migration
 
         $this->forge->addKey('id', true);
         $this->forge->addForeignKey('id_penyedia', 'penyedia', 'id', 'CASCADE', 'CASCADE');
-        $this->forge->addForeignKey('id_kota_asal', 'kota', 'id', 'CASCADE', 'SET NULL');
-        $this->forge->addForeignKey('id_kota_tujuan', 'kota', 'id', 'CASCADE', 'SET NULL');
+        $this->forge->addForeignKey('id_lokasi_asal', 'lokasi', 'id', 'CASCADE', 'SET NULL');
+        $this->forge->addForeignKey('id_lokasi_tujuan', 'lokasi', 'id', 'CASCADE', 'SET NULL');
         $this->forge->createTable('jadwal');
     }
 

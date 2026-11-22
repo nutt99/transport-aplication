@@ -4,16 +4,16 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
-class KotaModel extends Model
+class LokasiModel extends Model
 {
-    protected $table            = 'kota';
+    protected $table            = 'lokasi';
     protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
     protected $allowedFields    = [
-        'nama_kota',
+        'nama_lokasi',
         'latitude',
         'longitude',
         'created_at',
@@ -31,15 +31,15 @@ class KotaModel extends Model
 
     // Validation
     protected $validationRules = [
-        'nama_kota' => 'required|min_length[2]|max_length[100]',
+        'nama_lokasi' => 'required|min_length[2]|max_length[100]',
         'latitude'  => 'required|decimal',
         'longitude' => 'required|decimal',
     ];
     protected $validationMessages   = [
-        'nama_kota' => [
-            'required'   => 'Nama kota wajib diisi.',
-            'min_length' => 'Nama kota minimal 2 karakter.',
-            'max_length' => 'Nama kota maksimal 100 karakter.',
+        'nama_lokasi' => [
+            'required'   => 'Nama lokasi wajib diisi.',
+            'min_length' => 'Nama lokasi minimal 2 karakter.',
+            'max_length' => 'Nama lokasi maksimal 100 karakter.',
         ],
         'latitude' => [
             'required' => 'Latitude wajib diisi.',

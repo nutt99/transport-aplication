@@ -4,7 +4,7 @@ namespace App\Controllers\Api;
 
 use CodeIgniter\RESTful\ResourceController;
 use App\Models\TransportModel;
-use App\Models\KotaModel;
+use App\Models\LokasiModel;
 use App\Models\JadwalModel;
 
 class Transport extends ResourceController
@@ -27,13 +27,13 @@ class Transport extends ResourceController
     }
 
     /**
-     * GET /api/transport/kota
+     * GET /api/transport/lokasi
      * Mengambil daftar seluruh titik lokasi (bandara, stasiun, terminal) untuk dropdown asal / tujuan
      */
-    public function kota()
+    public function lokasi()
     {
-        $kotaModel = new KotaModel();
-        $data = $kotaModel->orderBy('nama_kota', 'ASC')->findAll();
+        $lokasiModel = new LokasiModel();
+        $data = $lokasiModel->orderBy('nama_lokasi', 'ASC')->findAll();
 
         return $this->respond([
             'status' => 'success',
@@ -51,7 +51,7 @@ class Transport extends ResourceController
      */
     public function tarif()
     {
-        $kotaModel   = new KotaModel();
+        $lokasiModel   = new LokasiModel();
         $jadwalModel = new JadwalModel();
 
         $idAsal       = $this->request->getGet('id_asal');
@@ -60,40 +60,40 @@ class Transport extends ResourceController
         $tujuan       = $this->request->getGet('tujuan');
         $jamBerangkat = $this->request->getGet('jam');
 
-        $kotaAsal = null;
+        $lokasiAsal = null;
         if (!empty($idAsal)) {
-            $kotaAsal = $kotaModel->find($idAsal);
+            $lokasiAsal = $lokasiModel->find($idAsal);
         } elseif (!empty($asal)) {
-            $kotaAsal = $kotaModel->like('nama_kota', trim($asal), 'both', null, true)->first();
+            $lokasiAsal = $lokasiModel->like('nama_lokasi', trim($asal), 'both', null, true)->first();
         }
 
-        $kotaTujuan = null;
+        $lokasiTujuan = null;
         if (!empty($idTujuan)) {
-            $kotaTujuan = $kotaModel->find($idTujuan);
+            $lokasiTujuan = $lokasiModel->find($idTujuan);
         } elseif (!empty($tujuan)) {
-            $kotaTujuan = $kotaModel->like('nama_kota', trim($tujuan), 'both', null, true)->first();
+            $lokasiTujuan = $lokasiModel->like('nama_lokasi', trim($tujuan), 'both', null, true)->first();
         }
 
-        if (!$kotaAsal) {
+        if (!$lokasiAsal) {
             return $this->failNotFound('Lokasi asal tidak ditemukan. Masukkan parameter "id_asal" atau "asal" yang valid.');
         }
 
-        if (!$kotaTujuan) {
+        if (!$lokasiTujuan) {
             return $this->failNotFound('Lokasi tujuan tidak ditemukan. Masukkan parameter "id_tujuan" atau "tujuan" yang valid.');
         }
 
-        if ($kotaAsal['id'] === $kotaTujuan['id']) {
+        if ($lokasiAsal['id'] === $lokasiTujuan['id']) {
             return $this->failValidationErrors('Lokasi asal dan tujuan tidak boleh sama.');
         }
 
         $jarakKm = $this->hitungJarakKm(
-            $kotaAsal['latitude'],
-            $kotaAsal['longitude'],
-            $kotaTujuan['latitude'],
-            $kotaTujuan['longitude']
+            $lokasiAsal['latitude'],
+            $lokasiAsal['longitude'],
+            $lokasiTujuan['latitude'],
+            $lokasiTujuan['longitude']
         );
 
-        $jadwalList = $jadwalModel->cariJadwal($kotaAsal['id'], $kotaTujuan['id']);
+        $jadwalList = $jadwalModel->cariJadwal($lokasiAsal['id'], $lokasiTujuan['id']);
 
         $hasilPilihan = [];
         foreach ($jadwalList as $j) {
@@ -139,16 +139,16 @@ class Transport extends ResourceController
             'data'   => [
                 'rute' => [
                     'asal' => [
-                        'id'        => (int)$kotaAsal['id'],
-                        'nama_kota' => $kotaAsal['nama_kota'],
-                        'latitude'  => (float)$kotaAsal['latitude'],
-                        'longitude' => (float)$kotaAsal['longitude'],
+                        'id'        => (int)$lokasiAsal['id'],
+                        'nama_lokasi' => $lokasiAsal['nama_lokasi'],
+                        'latitude'  => (float)$lokasiAsal['latitude'],
+                        'longitude' => (float)$lokasiAsal['longitude'],
                     ],
                     'tujuan' => [
-                        'id'        => (int)$kotaTujuan['id'],
-                        'nama_kota' => $kotaTujuan['nama_kota'],
-                        'latitude'  => (float)$kotaTujuan['latitude'],
-                        'longitude' => (float)$kotaTujuan['longitude'],
+                        'id'        => (int)$lokasiTujuan['id'],
+                        'nama_lokasi' => $lokasiTujuan['nama_lokasi'],
+                        'latitude'  => (float)$lokasiTujuan['latitude'],
+                        'longitude' => (float)$lokasiTujuan['longitude'],
                     ],
                     'jarak_km'      => $jarakKm,
                     'jam_berangkat' => !empty($jamBerangkat) ? $jamBerangkat : null,

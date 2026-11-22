@@ -4,7 +4,7 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
-class Kota extends Migration
+class Lokasi extends Migration
 {
     public function up()
     {
@@ -13,7 +13,7 @@ class Kota extends Migration
                 'type'           => 'INT',
                 'auto_increment' => true,
             ],
-            'nama_kota' => [
+            'nama_lokasi' => [
                 'type'       => 'VARCHAR',
                 'constraint' => 100,
             ],
@@ -30,11 +30,11 @@ class Kota extends Migration
         ]);
 
         $this->forge->addKey('id', true);
-        $this->forge->createTable('kota');
+        $this->forge->createTable('lokasi');
     }
 
     public function down()
     {
-        $this->forge->dropTable('kota');
+        $this->forge->dropTable('lokasi');
     }
 }
