@@ -14,8 +14,8 @@ class JadwalModel extends Model
     protected $protectFields    = true;
     protected $allowedFields    = [
         'id_penyedia',
-        'id_kota_asal',
-        'id_kota_tujuan',
+        'id_lokasi_asal',
+        'id_lokasi_tujuan',
         'start_hours',
         'ended_hours',
         'tarif_per_km',
@@ -35,8 +35,8 @@ class JadwalModel extends Model
     // Validation
     protected $validationRules = [
         'id_penyedia'    => 'required|is_natural_no_zero',
-        'id_kota_asal'   => 'permit_empty|is_natural_no_zero',
-        'id_kota_tujuan' => 'permit_empty|is_natural_no_zero',
+        'id_lokasi_asal'   => 'permit_empty|is_natural_no_zero',
+        'id_lokasi_tujuan' => 'permit_empty|is_natural_no_zero',
         'start_hours'    => 'required',
         'ended_hours'    => 'required',
         'tarif_per_km'   => 'required|numeric',
@@ -61,7 +61,7 @@ class JadwalModel extends Model
     protected $cleanValidationRules = true;
 
     /**
-     * Ambil data jadwal lengkap dengan join penyedia, transport, kota asal, dan kota tujuan
+     * Ambil data jadwal lengkap dengan join penyedia, transport, lokasi asal, dan lokasi tujuan
      */
     public function getJadwalDetail(?int $id = null)
     {
@@ -70,17 +70,17 @@ class JadwalModel extends Model
                 penyedia.nama_penyedia,
                 transport.id as id_transport,
                 transport.jenis as jenis_transport,
-                kota_asal.nama_kota as nama_kota_asal,
-                kota_asal.latitude as lat_kota_asal,
-                kota_asal.longitude as lng_kota_asal,
-                kota_tujuan.nama_kota as nama_kota_tujuan,
-                kota_tujuan.latitude as lat_kota_tujuan,
-                kota_tujuan.longitude as lng_kota_tujuan
+                lokasi_asal.nama_lokasi as nama_lokasi_asal,
+                lokasi_asal.latitude as lat_lokasi_asal,
+                lokasi_asal.longitude as lng_lokasi_asal,
+                lokasi_tujuan.nama_lokasi as nama_lokasi_tujuan,
+                lokasi_tujuan.latitude as lat_lokasi_tujuan,
+                lokasi_tujuan.longitude as lng_lokasi_tujuan
             ')
             ->join('penyedia', 'penyedia.id = jadwal.id_penyedia', 'left')
             ->join('transport', 'transport.id = penyedia.id_transport', 'left')
-            ->join('kota as kota_asal', 'kota_asal.id = jadwal.id_kota_asal', 'left')
-            ->join('kota as kota_tujuan', 'kota_tujuan.id = jadwal.id_kota_tujuan', 'left');
+            ->join('lokasi as lokasi_asal', 'lokasi_asal.id = jadwal.id_lokasi_asal', 'left')
+            ->join('lokasi as lokasi_tujuan', 'lokasi_tujuan.id = jadwal.id_lokasi_tujuan', 'left');
 
         if ($id !== null) {
             return $builder->where('jadwal.id', $id)->first();
@@ -90,29 +90,29 @@ class JadwalModel extends Model
     }
 
     /**
-     * Cari jadwal berdasarkan kota asal dan tujuan
+     * Cari jadwal berdasarkan lokasi asal dan tujuan
      */
-    public function cariJadwal(?int $idKotaAsal = null, ?int $idKotaTujuan = null)
+    public function cariJadwal(?int $idLokasiAsal = null, ?int $idLokasiTujuan = null)
     {
         $builder = $this->select('
                 jadwal.*,
                 penyedia.nama_penyedia,
                 transport.id as id_transport,
                 transport.jenis as jenis_transport,
-                kota_asal.nama_kota as nama_kota_asal,
-                kota_tujuan.nama_kota as nama_kota_tujuan
+                lokasi_asal.nama_lokasi as nama_lokasi_asal,
+                lokasi_tujuan.nama_lokasi as nama_lokasi_tujuan
             ')
             ->join('penyedia', 'penyedia.id = jadwal.id_penyedia', 'left')
             ->join('transport', 'transport.id = penyedia.id_transport', 'left')
-            ->join('kota as kota_asal', 'kota_asal.id = jadwal.id_kota_asal', 'left')
-            ->join('kota as kota_tujuan', 'kota_tujuan.id = jadwal.id_kota_tujuan', 'left');
+            ->join('lokasi as lokasi_asal', 'lokasi_asal.id = jadwal.id_lokasi_asal', 'left')
+            ->join('lokasi as lokasi_tujuan', 'lokasi_tujuan.id = jadwal.id_lokasi_tujuan', 'left');
 
-        if ($idKotaAsal !== null) {
-            $builder->where('jadwal.id_kota_asal', $idKotaAsal);
+        if ($idLokasiAsal !== null) {
+            $builder->where('jadwal.id_lokasi_asal', $idLokasiAsal);
         }
 
-        if ($idKotaTujuan !== null) {
-            $builder->where('jadwal.id_kota_tujuan', $idKotaTujuan);
+        if ($idLokasiTujuan !== null) {
+            $builder->where('jadwal.id_lokasi_tujuan', $idLokasiTujuan);
         }
 
         return $builder->findAll();

@@ -17,11 +17,11 @@ class JadwalSeeder extends Seeder
             $penyediaMap[$p['nama_penyedia']] = $p['id'];
         }
 
-        // Mapping nama_kota ke id
-        $kotaRows = $this->db->table('kota')->get()->getResultArray();
-        $kotaMap = [];
-        foreach ($kotaRows as $k) {
-            $kotaMap[$k['nama_kota']] = $k['id'];
+        // Mapping nama_lokasi ke id
+        $lokasiRows = $this->db->table('lokasi')->get()->getResultArray();
+        $lokasiMap = [];
+        foreach ($lokasiRows as $k) {
+            $lokasiMap[$k['nama_lokasi']] = $k['id'];
         }
 
         $jadwalList = [];
@@ -37,16 +37,16 @@ class JadwalSeeder extends Seeder
         ) use (&$jadwalList) {
             $jadwalList[] = [
                 'penyedia'     => $penyedia,
-                'kota_asal'    => $asal,
-                'kota_tujuan'  => $tujuan,
+                'lokasi_asal'    => $asal,
+                'lokasi_tujuan'  => $tujuan,
                 'start_hours'  => $start,
                 'ended_hours'  => $end,
                 'tarif_per_km' => $tarifPerKm,
             ];
             $jadwalList[] = [
                 'penyedia'     => $penyedia,
-                'kota_asal'    => $tujuan,
-                'kota_tujuan'  => $asal,
+                'lokasi_asal'    => $tujuan,
+                'lokasi_tujuan'  => $asal,
                 'start_hours'  => $start,
                 'ended_hours'  => $end,
                 'tarif_per_km' => $tarifPerKm,
@@ -127,7 +127,7 @@ class JadwalSeeder extends Seeder
         ], '07:30:00', '22:00:00', 750.00);
 
         // ==========================================
-        // 2. BUS SUMATRA & KONEKSI DALAM KOTA MEDAN
+        // 2. BUS SUMATRA & KONEKSI DALAM LOKASI MEDAN
         // ==========================================
         // Shuttle DAMRI Bandara KNO <-> Terminal & Stasiun Medan
         $addPP('DAMRI', 'Medan - Bandara Kualanamu (KNO)', 'Medan - Terminal Amplas', '05:00:00', '23:00:00', 1100.00);
@@ -256,8 +256,8 @@ class JadwalSeeder extends Seeder
         $data = [];
         foreach ($jadwalList as $item) {
             $idPenyedia = $penyediaMap[$item['penyedia']] ?? null;
-            $idAsal     = $kotaMap[$item['kota_asal']] ?? null;
-            $idTujuan   = $kotaMap[$item['kota_tujuan']] ?? null;
+            $idAsal     = $lokasiMap[$item['lokasi_asal']] ?? null;
+            $idTujuan   = $lokasiMap[$item['lokasi_tujuan']] ?? null;
 
             if (!$idPenyedia || !$idAsal || !$idTujuan) {
                 continue;
@@ -265,8 +265,8 @@ class JadwalSeeder extends Seeder
 
             $data[] = [
                 'id_penyedia'    => $idPenyedia,
-                'id_kota_asal'   => $idAsal,
-                'id_kota_tujuan' => $idTujuan,
+                'id_lokasi_asal'   => $idAsal,
+                'id_lokasi_tujuan' => $idTujuan,
                 'start_hours'    => $item['start_hours'],
                 'ended_hours'    => $item['ended_hours'],
                 'tarif_per_km'   => $item['tarif_per_km'],
