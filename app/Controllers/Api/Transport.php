@@ -199,11 +199,11 @@ class Transport extends ResourceController
         $wisataLat = (float)$wisataLat;
         $wisataLng = (float)$wisataLng;
 
-        $kotaModel   = new KotaModel();
+        $lokasiModel   = new LokasiModel();
         $jadwalModel = new JadwalModel();
-        $semuaKota   = $kotaModel->findAll();
+        $semuaLokasi   = $lokasiModel->findAll();
 
-        if (empty($semuaKota)) {
+        if (empty($semuaLokasi)) {
             return $this->failNotFound('Data lokasi transportasi belum tersedia di database.');
         }
 
@@ -213,8 +213,8 @@ class Transport extends ResourceController
         $bandaraKno  = null;
         $bandaraDtb  = null;
 
-        foreach ($semuaKota as $k) {
-            $nama = $k['nama_kota'];
+        foreach ($semuaLokasi as $k) {
+            $nama = $k['nama_lokasi'];
             $isBandara = (stripos($nama, 'Bandara') !== false);
 
             if ($isBandara) {
@@ -271,7 +271,7 @@ class Transport extends ResourceController
 
             foreach ($bandaraList as $b) {
                 // Kecualikan bandara di Sumut
-                if (stripos($b['nama_kota'], '(KNO)') !== false || stripos($b['nama_kota'], '(DTB)') !== false) {
+                if (stripos($b['nama_lokasi'], '(KNO)') !== false || stripos($b['nama_lokasi'], '(DTB)') !== false) {
                     continue;
                 }
                 $dist = $this->hitungJarakKm($userLat, $userLng, $b['latitude'], $b['longitude']);
@@ -324,17 +324,17 @@ class Transport extends ResourceController
             $perjalananPergi[] = [
                 'segmen'              => 1,
                 'jenis_segmen'        => 'Penerbangan',
-                'deskripsi'           => "Penerbangan dari bandara terdekat user ({$bandaraAsal['nama_kota']}) menuju gerbang Sumatera Utara ({$bandaraTujuanSumut['nama_kota']})",
+                'deskripsi'           => "Penerbangan dari bandara terdekat user ({$bandaraAsal['nama_lokasi']}) menuju gerbang Sumatera Utara ({$bandaraTujuanSumut['nama_lokasi']})",
                 'titik_berangkat'     => [
                     'id'        => (int)$bandaraAsal['id'],
-                    'nama_kota' => $bandaraAsal['nama_kota'],
+                    'nama_lokasi' => $bandaraAsal['nama_lokasi'],
                     'latitude'  => (float)$bandaraAsal['latitude'],
                     'longitude' => (float)$bandaraAsal['longitude'],
                     'jarak_dari_user_km' => $jarakKeBandaraAsal,
                 ],
                 'titik_tiba'          => [
                     'id'        => (int)$bandaraTujuanSumut['id'],
-                    'nama_kota' => $bandaraTujuanSumut['nama_kota'],
+                    'nama_lokasi' => $bandaraTujuanSumut['nama_lokasi'],
                     'latitude'  => (float)$bandaraTujuanSumut['latitude'],
                     'longitude' => (float)$bandaraTujuanSumut['longitude'],
                 ],
@@ -387,16 +387,16 @@ class Transport extends ResourceController
                 $perjalananPergi[] = [
                     'segmen'              => 2,
                     'jenis_segmen'        => 'Transportasi Darat',
-                    'deskripsi'           => "Perjalanan darat dari bandara kedatangan ({$bandaraTujuanSumut['nama_kota']}) menuju titik transportasi terdekat dari objek wisata ({$titikWisataTerdekat['nama_kota']})",
+                    'deskripsi'           => "Perjalanan darat dari bandara kedatangan ({$bandaraTujuanSumut['nama_lokasi']}) menuju titik transportasi terdekat dari objek wisata ({$titikWisataTerdekat['nama_lokasi']})",
                     'titik_berangkat'     => [
                         'id'        => (int)$bandaraTujuanSumut['id'],
-                        'nama_kota' => $bandaraTujuanSumut['nama_kota'],
+                        'nama_lokasi' => $bandaraTujuanSumut['nama_lokasi'],
                         'latitude'  => (float)$bandaraTujuanSumut['latitude'],
                         'longitude' => (float)$bandaraTujuanSumut['longitude'],
                     ],
                     'titik_tiba'          => [
                         'id'        => (int)$titikWisataTerdekat['id'],
-                        'nama_kota' => $titikWisataTerdekat['nama_kota'],
+                        'nama_lokasi' => $titikWisataTerdekat['nama_lokasi'],
                         'latitude'  => (float)$titikWisataTerdekat['latitude'],
                         'longitude' => (float)$titikWisataTerdekat['longitude'],
                     ],
@@ -447,7 +447,7 @@ class Transport extends ResourceController
                 $estimasiStandar = round($jarakDarat * 400.00, -2);
                 $pilihanDarat[] = [
                     'id_jadwal'             => null,
-                    'penyedia'              => 'Kereta Api / Bus Antar-Kota Sumut',
+                    'penyedia'              => 'Kereta Api / Bus Antar-Lokasi Sumut',
                     'jenis_transport'       => 'Bus / Kereta',
                     'jam_berlaku'           => '06:00 - 21:00',
                     'estimasi_tarif'        => (int)$estimasiStandar,
@@ -462,17 +462,17 @@ class Transport extends ResourceController
             $perjalananPergi[] = [
                 'segmen'              => 1,
                 'jenis_segmen'        => 'Transportasi Darat Lokal',
-                'deskripsi'           => "Perjalanan darat dari titik terdekat user ({$titikAsalUser['nama_kota']}) menuju titik transportasi objek wisata ({$titikWisataTerdekat['nama_kota']})",
+                'deskripsi'           => "Perjalanan darat dari titik terdekat user ({$titikAsalUser['nama_lokasi']}) menuju titik transportasi objek wisata ({$titikWisataTerdekat['nama_lokasi']})",
                 'titik_berangkat'     => [
                     'id'        => (int)$titikAsalUser['id'],
-                    'nama_kota' => $titikAsalUser['nama_kota'],
+                    'nama_lokasi' => $titikAsalUser['nama_lokasi'],
                     'latitude'  => (float)$titikAsalUser['latitude'],
                     'longitude' => (float)$titikAsalUser['longitude'],
                     'jarak_dari_user_km' => $jarakUserKeTitik,
                 ],
                 'titik_tiba'          => [
                     'id'        => (int)$titikWisataTerdekat['id'],
-                    'nama_kota' => $titikWisataTerdekat['nama_kota'],
+                    'nama_lokasi' => $titikWisataTerdekat['nama_lokasi'],
                     'latitude'  => (float)$titikWisataTerdekat['latitude'],
                     'longitude' => (float)$titikWisataTerdekat['longitude'],
                 ],
@@ -499,7 +499,7 @@ class Transport extends ResourceController
                 $rincianPulang[] = [
                     'segmen'              => $segmenIdx++,
                     'jenis_segmen'        => $s['jenis_segmen'],
-                    'deskripsi'           => "Perjalanan pulang: {$s['titik_tiba']['nama_kota']} kembali menuju {$s['titik_berangkat']['nama_kota']}",
+                    'deskripsi'           => "Perjalanan pulang: {$s['titik_tiba']['nama_lokasi']} kembali menuju {$s['titik_berangkat']['nama_lokasi']}",
                     'titik_berangkat'     => $s['titik_tiba'],
                     'titik_tiba'          => $s['titik_berangkat'],
                     'jarak_km'            => $s['jarak_km'],
@@ -522,7 +522,7 @@ class Transport extends ResourceController
                     'tipe_perjalanan'     => ($tripType === 'roundtrip') ? 'Pulang-Pergi (PP)' : 'Sekali Jalan (One-Way)',
                     'stasiun_terdekat_wisata' => [
                         'id'        => (int)$titikWisataTerdekat['id'],
-                        'nama_kota' => $titikWisataTerdekat['nama_kota'],
+                        'nama_lokasi' => $titikWisataTerdekat['nama_lokasi'],
                         'latitude'  => (float)$titikWisataTerdekat['latitude'],
                         'longitude' => (float)$titikWisataTerdekat['longitude'],
                         'jarak_ke_objek_wisata_km' => $jarakTerdekatWisata,
