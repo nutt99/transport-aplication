@@ -48,6 +48,7 @@ flowchart TD
 | 1 | `GET` | `/api/transport/transports` | `Transport::index` | Mengambil seluruh master data moda transportasi |
 | 2 | `GET` | `/api/transport/kota` | `Transport::kota` | Mengambil daftar seluruh kota terurut abjad (A-Z) |
 | 3 | `GET` | `/api/transport/tarif` | `Transport::tarif` | Menghitung jarak antarkota dan rincian tarif perjalanan |
+| 4 | `POST`/`GET` | `/api/transport/rekomendasi-wisata` | `Transport::rekomendasiWisata` | Rekomendasi rute & estimasi biaya (One-Way / Round-Trip) berdasarkan koordinat user & wisata |
 
 ---
 
@@ -247,6 +248,128 @@ Terjadi jika nilai ID atau nama kota asal sama persis dengan kota tujuan.
 
 ---
 
+### 4.4. Rekomendasi Rute Wisata & Estimasi Biaya (One-Way / Round-Trip)
+
+Endpoint cerdas untuk merencanakan perjalanan wisata ke Sumatera Utara:
+- **Deteksi Otomatis Luar Sumut**: Jika user di luar Sumut, sistem otomatis mencari bandara keberangkatan terdekat dari GPS user.
+- **Gerbang Kedatangan Optimal**: Menyesuaikan bandara di Sumut (Kualanamu `KNO` atau Silangit `DTB`) yang paling dekat dengan objek wisata.
+- **Pemberhentian Terdekat**: Mencari stasiun KA atau terminal bus di Sumut yang posisinya paling dekat dengan koordinat destinasi wisata.
+- **Pilihan Trip**: Mendukung perjalanan sekali jalan (`oneway`) dan pulang-pergi (`roundtrip`).
+
+- **Method**: `POST` (Direkomendasikan dengan JSON Body) atau `GET` (via query string)
+- **Path**: `/api/transport/rekomendasi-wisata`
+- **Autentikasi**: *None*
+
+#### Parameter Permintaan
+| Parameter | Tipe Data | Wajib | Keterangan |
+| :--- | :--- | :--- | :--- |
+| `user_lat` | Float | Ya | Latitude koordinat lokasi pengguna (GPS frontend) |
+| `user_lng` | Float | Ya | Longitude koordinat lokasi pengguna (GPS frontend) |
+| `wisata_lat` | Float | Ya | Latitude koordinat objek wisata dari API wisata |
+| `wisata_lng` | Float | Ya | Longitude koordinat objek wisata dari API wisata |
+| `nama_wisata` | String | Tidak | Nama destinasi wisata (contoh: "Danau Toba", "Bukit Lawang") |
+| `trip_type` | String | Tidak | Pilihan: `'roundtrip'` (default) atau `'oneway'` |
+
+#### Contoh Payload Request (JSON)
+```json
+{
+  "user_lat": -6.2088,
+  "user_lng": 106.8456,
+  "wisata_lat": 2.6629,
+  "wisata_lng": 98.9324,
+  "nama_wisata": "Danau Toba (Parapat)",
+  "trip_type": "roundtrip"
+}
+```
+
+#### Contoh Response Sukses (200 OK)
+```json
+{
+  "status": "success",
+  "data": {
+    "metadata": {
+      "nama_wisata": "Danau Toba (Parapat)",
+      "koordinat_wisata": { "latitude": 2.6629, "longitude": 98.9324 },
+      "koordinat_user": { "latitude": -6.2088, "longitude": 106.8456 },
+      "user_di_luar_sumut": true,
+      "trip_type": "roundtrip",
+      "tipe_perjalanan": "Pulang-Pergi (PP)",
+      "stasiun_terdekat_wisata": {
+        "id": 17,
+        "nama_kota": "Pematangsiantar - Stasiun Siantar (SIR)",
+        "latitude": 2.9617,
+        "longitude": 99.0644,
+        "jarak_ke_objek_wisata_km": 36.32
+      }
+    },
+    "ringkasan_biaya": {
+      "biaya_pergi": 1391500,
+      "biaya_pergi_format": "Rp 1.391.500",
+      "biaya_pulang": 1391500,
+      "biaya_pulang_format": "Rp 1.391.500",
+      "total_biaya_estimasi": 2783000,
+      "total_biaya_format": "Rp 2.783.000",
+      "keterangan": "Estimasi menggunakan opsi armada termurah untuk setiap segmen rute."
+    },
+    "rute_perjalanan": {
+      "pergi": [
+        {
+          "segmen": 1,
+          "jenis_segmen": "Penerbangan",
+          "deskripsi": "Penerbangan dari bandara terdekat user (Jakarta / Tangerang - Bandara Soekarno-Hatta (CGK)) menuju gerbang Sumatera Utara (Danau Toba / Siborong-Borong - Bandara Silangit (DTB))",
+          "titik_berangkat": {
+            "id": 12,
+            "nama_kota": "Jakarta / Tangerang - Bandara Soekarno-Hatta (CGK)",
+            "latitude": -6.125567,
+            "longitude": 106.655897,
+            "jarak_dari_user_km": 22.92
+          },
+          "titik_tiba": {
+            "id": 3,
+            "nama_kota": "Danau Toba / Siborong-Borong - Bandara Silangit (DTB)",
+            "latitude": 2.259889,
+            "longitude": 98.995222
+          },
+          "jarak_km": 1256.45,
+          "tarif_termurah": 1375000,
+          "tarif_termurah_format": "Rp 1.375.000",
+          "opsi_armada": [
+            {
+              "penyedia": "Super Air Jet",
+              "jenis_transport": "Pesawat",
+              "estimasi_tarif": 1375000,
+              "estimasi_tarif_format": "Rp 1.375.000"
+            }
+          ]
+        },
+        {
+          "segmen": 2,
+          "jenis_segmen": "Transportasi Darat",
+          "deskripsi": "Perjalanan darat dari bandara kedatangan menuju titik transportasi terdekat dari objek wisata",
+          "jarak_km": 36.32,
+          "tarif_termurah": 16500,
+          "tarif_termurah_format": "Rp 16.500"
+        }
+      ],
+      "pulang": [
+        {
+          "segmen": 1,
+          "jenis_segmen": "Transportasi Darat",
+          "deskripsi": "Perjalanan pulang darat dari titik wisata menuju bandara keberangkatan"
+        },
+        {
+          "segmen": 2,
+          "jenis_segmen": "Penerbangan",
+          "deskripsi": "Penerbangan pulang kembali menuju bandara asal user"
+        }
+      ]
+    }
+  }
+}
+```
+
+---
+
 ## 5. Rumus & Logika Perhitungan
 
 ### 5.1. Formula Haversine (Jarak Km)
@@ -301,4 +424,40 @@ async function cekTarifTransportasi(idAsal, idTujuan) {
 
 // Pemanggilan contoh: Jakarta (ID: 2) ke Bandung (ID: 1)
 cekTarifTransportasi(2, 1);
+
+// 3. Rekomendasi Wisata & Estimasi Biaya (PP / One-Way) dari Frontend
+async function dapatkanEstimasiBiayaWisata(userCoords, wisataCoords, namaWisata, tripType = 'roundtrip') {
+  const url = 'http://localhost:8080/api/transport/rekomendasi-wisata';
+  
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
+        user_lat: userCoords.latitude,
+        user_lng: userCoords.longitude,
+        wisata_lat: wisataCoords.latitude,
+        wisata_lng: wisataCoords.longitude,
+        nama_wisata: namaWisata,
+        trip_type: tripType // 'roundtrip' atau 'oneway'
+      })
+    });
+    
+    const result = await response.json();
+    if (result.status === 'success') {
+      console.log('Stasiun/Terminal Terdekat:', result.data.metadata.stasiun_terdekat_wisata.nama_kota);
+      console.log('Total Biaya Estimasi:', result.data.ringkasan_biaya.total_biaya_format);
+      console.log('Rute Pergi:', result.data.rute_perjalanan.pergi);
+      if (result.data.rute_perjalanan.pulang) {
+        console.log('Rute Pulang:', result.data.rute_perjalanan.pulang);
+      }
+      return result.data;
+    }
+  } catch (error) {
+    console.error('Gagal mengambil rekomendasi biaya:', error);
+  }
+}
 ```

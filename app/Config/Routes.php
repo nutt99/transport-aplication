@@ -11,6 +11,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'], function($routes) 
         $routes->get('transports', 'Transport::index');
         $routes->get('lokasi', 'Transport::lokasi');
         $routes->get('tarif', 'Transport::tarif');
+        $routes->match(['get', 'post'], 'rekomendasi-wisata', 'Transport::rekomendasiWisata');
     });
 
     $routes->resource('moda', ['controller' => 'Moda']);
