@@ -55,7 +55,7 @@ class Cors extends BaseConfig
         /**
          * Set methods to allow.
          */
-        'allowedMethods' => ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
+        'allowedMethods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
         /**
          * Set how many seconds the results of a preflight request can be cached.
