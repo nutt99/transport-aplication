@@ -207,6 +207,46 @@ class PenyediaSeeder extends Seeder
                 'created_at'    => $now,
                 'updated_at'    => $now,
             ],
+            [
+                'id_transport'  => $transportMap['Bus'],
+                'nama_penyedia' => 'PO Intra (Pematangsiantar - Medan)',
+                'latitude'      => 2.95950000,
+                'longitude'     => 99.06200000,
+                'created_at'    => $now,
+                'updated_at'    => $now,
+            ],
+            [
+                'id_transport'  => $transportMap['Bus'],
+                'nama_penyedia' => 'PO Sinabung Jaya (Karo - Medan)',
+                'latitude'      => 3.18690000,
+                'longitude'     => 98.50890000,
+                'created_at'    => $now,
+                'updated_at'    => $now,
+            ],
+            [
+                'id_transport'  => $transportMap['Bus'],
+                'nama_penyedia' => 'PO Makmur & Halmahera',
+                'latitude'      => 3.53530000,
+                'longitude'     => 98.70580000,
+                'created_at'    => $now,
+                'updated_at'    => $now,
+            ],
+            [
+                'id_transport'  => $transportMap['Travel / Shuttle'],
+                'nama_penyedia' => 'Paradep Taxi & Shuttle',
+                'latitude'      => 2.96120000,
+                'longitude'     => 99.06450000,
+                'created_at'    => $now,
+                'updated_at'    => $now,
+            ],
+            [
+                'id_transport'  => $transportMap['Travel / Shuttle'],
+                'nama_penyedia' => 'Nice Trans Sumut',
+                'latitude'      => 3.58970000,
+                'longitude'     => 98.67380000,
+                'created_at'    => $now,
+                'updated_at'    => $now,
+            ],
         ];
 
         $this->db->table('penyedia')->insertBatch($data);
