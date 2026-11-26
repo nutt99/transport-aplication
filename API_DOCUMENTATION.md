@@ -1,17 +1,19 @@
 # Dokumentasi Spesifikasi REST API - Transport Application
 
-Dokumentasi resmi antarmuka pemrograman aplikasi (API) Transport Application berbasis CodeIgniter 4. Dokumentasi ini merinci seluruh endpoint, mekanisme autentikasi API Key, konfigurasi CORS, format payload, skema response sukses & error, serta contoh implementasi klien.
+Dokumentasi resmi antarmuka pemrograman aplikasi (API) Transport Application berbasis CodeIgniter 4. Dokumentasi ini merinci seluruh endpoint REST API (`/api/*`), endpoint BFF/Proxy Frontend (`/app-api/*`), mekanisme autentikasi API Key, konfigurasi CORS, format payload, serta skema response sukses & error.
 
 ---
 
 ## 1. Informasi Umum & Arsitektur
 
-- **Base URL Pengembangan**: `http://localhost:8080`
-- **Prefix Endpoint**: `/api`
+- **Base URL Server**: `http://localhost:8080` (atau sesuai `TRANSPORT_API_URL` di `.env`, misal `http://127.0.0.1:8082`)
+- **Prefix REST API**: `/api` (dilindungi `X-API-KEY`)
+- **Prefix Frontend Proxy (BFF)**: `/app-api` (tanpa `X-API-KEY` di browser; diteruskan oleh server via [`ApiClient.php`](file:///home/azure/client-server-project/transport-aplication/app/Libraries/ApiClient.php))
 - **Format Pertukaran Data**: JSON (`application/json`)
 - **Controller Terkait**:
   - Bisnis Rute & Rekomendasi: [`Transport.php`](file:///home/azure/client-server-project/transport-aplication/app/Controllers/Api/Transport.php)
   - CRUD Master Data: [`Moda.php`](file:///home/azure/client-server-project/transport-aplication/app/Controllers/Api/Moda.php), [`Lokasi.php`](file:///home/azure/client-server-project/transport-aplication/app/Controllers/Api/Lokasi.php), [`Penyedia.php`](file:///home/azure/client-server-project/transport-aplication/app/Controllers/Api/Penyedia.php), [`Jadwal.php`](file:///home/azure/client-server-project/transport-aplication/app/Controllers/Api/Jadwal.php)
+  - Frontend API Proxy: [`FrontendApi.php`](file:///home/azure/client-server-project/transport-aplication/app/Controllers/FrontendApi.php)
 - **Konfigurasi Rute & Filter**: [`Routes.php`](file:///home/azure/client-server-project/transport-aplication/app/Config/Routes.php), [`Filters.php`](file:///home/azure/client-server-project/transport-aplication/app/Config/Filters.php), [`Cors.php`](file:///home/azure/client-server-project/transport-aplication/app/Config/Cors.php)
 
 ---
@@ -20,7 +22,7 @@ Dokumentasi resmi antarmuka pemrograman aplikasi (API) Transport Application ber
 
 Seluruh endpoint pada rute `/api/*` dilindungi oleh [`ApiKeyFilter`](file:///home/azure/client-server-project/transport-aplication/app/Filters/ApiKeyFilter.php) dan [`Cors`](file:///home/azure/client-server-project/transport-aplication/app/Config/Cors.php).
 
-### 2.1. Header Permintaan
+### 2.1. Header Permintaan (`/api/*`)
 Setiap klien wajib menyertakan header `X-API-KEY`:
 ```http
 X-API-KEY: <KUNCI_API_ANDA>
@@ -33,7 +35,7 @@ Content-Type: application/json
 | Tipe Key | Variabel `.env` | Hak Akses Method | Penggunaan |
 | :--- | :--- | :--- | :--- |
 | **Public Key** | `API_KEY_PUBLIC` | `GET` saja | Aplikasi Publik, Frontend Web, Aplikasi Mobile pengguna |
-| **Secret Key** | `API_KEY_SECRET` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | Dashboard Admin, Internal Server, Integrasi Backend |
+| **Secret Key** | `API_KEY_SECRET` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | Dashboard Admin (`LokasiController`, `TransportController`), Internal Server |
 
 > [!WARNING]
 > Permintaan non-`GET` (`POST`, `PUT`, `PATCH`, `DELETE`) menggunakan **Public Key** akan langsung ditolak dengan status **403 Forbidden**. Gunakan **Secret Key** untuk mutasi data.
@@ -68,15 +70,15 @@ Content-Type: application/json
 
 ## 3. Ringkasan Seluruh Rute API
 
-### 3.1. Rute Khusus Transport & Rekomendasi
+### 3.1. Rute Khusus Transport & Rekomendasi (`/api/transport/*`)
 | Method | Endpoint | Handler | Deskripsi |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/transport/transports` | `Transport::index` | Mengambil seluruh data jenis moda transportasi |
-| `GET` | `/api/transport/lokasi` | `Transport::lokasi` | Mengambil seluruh data titik lokasi (Bandara, Stasiun, Terminal) |
-| `GET` | `/api/transport/tarif` | `Transport::tarif` | Menghitung jarak, durasi, dan tarif dengan filter jam berangkat |
+| `GET` | `/api/transport/lokasi` | `Transport::lokasi` | Mengambil seluruh data titik lokasi (Bandara, Stasiun, Terminal, dll.) |
+| `GET` | `/api/transport/tarif` | `Transport::tarif` | Menghitung jarak dan tarif dengan filter jam berangkat |
 | `GET`/`POST`| `/api/transport/rekomendasi-wisata` | `Transport::rekomendasiWisata` | Rekomendasi rute multi-moda (udara + darat) & estimasi biaya PP |
 
-### 3.2. Rute Master Data (RESTful Resource)
+### 3.2. Rute Master Data (`/api/*` RESTful Resource)
 | Resource | Method | Endpoint | Akses Key | Fungsi |
 | :--- | :--- | :--- | :--- | :--- |
 | **Moda** | `GET` | `/api/moda` | Public / Secret | Menampilkan daftar seluruh moda |
@@ -84,10 +86,10 @@ Content-Type: application/json
 | | `POST` | `/api/moda` | **Secret Only** | Menambahkan moda baru |
 | | `PUT`/`PATCH`| `/api/moda/(:id)` | **Secret Only** | Mengubah nama moda |
 | | `DELETE`| `/api/moda/(:id)` | **Secret Only** | Menghapus moda |
-| **Lokasi** | `GET` | `/api/lokasi` | Public / Secret | Menampilkan daftar titik lokasi |
+| **Lokasi** | `GET` | `/api/lokasi` | Public / Secret | Menampilkan daftar titik lokasi (mendukung `?q=` & `?tipe=`) |
 | | `GET` | `/api/lokasi/(:id)` | Public / Secret | Menampilkan detail 1 lokasi |
-| | `POST` | `/api/lokasi` | **Secret Only** | Menambahkan lokasi baru |
-| | `PUT`/`PATCH`| `/api/lokasi/(:id)` | **Secret Only** | Mengubah data lokasi / koordinat |
+| | `POST` | `/api/lokasi` | **Secret Only** | Menambahkan lokasi baru (termasuk `tipe_lokasi`) |
+| | `PUT`/`PATCH`| `/api/lokasi/(:id)` | **Secret Only** | Mengubah data lokasi / tipe / koordinat |
 | | `DELETE`| `/api/lokasi/(:id)` | **Secret Only** | Menghapus lokasi |
 | **Penyedia** | `GET` | `/api/penyedia` | Public / Secret | Menampilkan penyedia armada + join moda |
 | | `GET` | `/api/penyedia/(:id)` | Public / Secret | Menampilkan detail penyedia |
@@ -99,6 +101,20 @@ Content-Type: application/json
 | | `POST` | `/api/jadwal` | **Secret Only** | Menambahkan jadwal rute baru |
 | | `PUT`/`PATCH`| `/api/jadwal/(:id)` | **Secret Only** | Mengubah jam / tarif jadwal |
 | | `DELETE`| `/api/jadwal/(:id)` | **Secret Only** | Menghapus jadwal rute |
+
+### 3.3. Rute Frontend Proxy / BFF (`/app-api/*`)
+Digunakan oleh halaman web publik ([`index.php`](file:///home/azure/client-server-project/transport-aplication/app/Views/frontend/index.php)) agar klien browser tidak perlu menyimpan `X-API-KEY` maupun terkena masalah CORS ke API eksternal JejakSumut.
+
+| Method | Endpoint | Handler | Sumber Data |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/app-api/wisata/destinasi` | `FrontendApi::destinasi` | API JejakSumut (`/destinasi`) |
+| `GET` | `/app-api/wisata/destinasi/(:segment)` | `FrontendApi::destinasiDetail/$1` | API JejakSumut (`/destinasi/{slug}`) |
+| `GET` | `/app-api/wisata/kategori` | `FrontendApi::kategori` | API JejakSumut (`/kategori`) |
+| `GET` | `/app-api/wisata/kabupaten-kota` | `FrontendApi::kabupatenKota` | API JejakSumut (`/kabupaten-kota`) |
+| `GET` | `/app-api/transport/transports` | `FrontendApi::transports` | Internal `/api/transport/transports` |
+| `GET` | `/app-api/transport/lokasi` | `FrontendApi::lokasi` | Internal `/api/transport/lokasi` |
+| `GET` | `/app-api/transport/tarif` | `FrontendApi::tarif` | Internal `/api/transport/tarif` |
+| `GET` | `/app-api/transport/rekomendasi-wisata` | `FrontendApi::rekomendasiWisata` | Internal `/api/transport/rekomendasi-wisata` |
 
 ---
 
@@ -122,7 +138,7 @@ Mengambil semua jenis moda transportasi.
 ---
 
 ### 4.2. GET `/api/transport/lokasi`
-Mengambil seluruh titik simpul transportasi (Bandara, Stasiun, Terminal) terurut abjad (A-Z) beserta titik koordinatnya.
+Mengambil seluruh titik simpul transportasi (Bandara, Stasiun, Terminal, Halte, Pelabuhan) terurut abjad (A-Z) beserta koordinat dan tipe lokasinya.
 
 **Response Sukses (200 OK):**
 ```json
@@ -132,6 +148,7 @@ Mengambil seluruh titik simpul transportasi (Bandara, Stasiun, Terminal) terurut
     {
       "id": "1",
       "nama_lokasi": "Bandara Internasional Kualanamu (KNO)",
+      "tipe_lokasi": "bandara",
       "latitude": "3.64220000",
       "longitude": "98.88520000",
       "created_at": "2026-11-22 08:00:00",
@@ -140,6 +157,7 @@ Mengambil seluruh titik simpul transportasi (Bandara, Stasiun, Terminal) terurut
     {
       "id": "2",
       "nama_lokasi": "Stasiun Medan",
+      "tipe_lokasi": "stasiun",
       "latitude": "3.59080000",
       "longitude": "98.67970000",
       "created_at": "2026-11-22 08:00:00",
@@ -152,7 +170,7 @@ Mengambil seluruh titik simpul transportasi (Bandara, Stasiun, Terminal) terurut
 ---
 
 ### 4.3. GET `/api/transport/tarif`
-Menghitung jarak antar dua titik lokasi, mencocokkan jadwal yang tersedia, menyaring berdasarkan jam berangkat (jika diberikan), dan mengurutkan secara otomatis dari estimasi tarif termurah.
+Menghitung jarak antar dua titik lokasi (Haversine Formula), mencocokkan jadwal yang tersedia, menyaring berdasarkan jam berangkat (jika diberikan), dan mengurutkan secara otomatis dari estimasi tarif termurah.
 
 #### Parameter Query:
 | Parameter | Tipe | Status | Keterangan |
@@ -162,13 +180,6 @@ Menghitung jarak antar dua titik lokasi, mencocokkan jadwal yang tersedia, menya
 | `asal` | String | Opsional* | Nama lokasi asal (wajib jika tidak ada `id_asal`) |
 | `tujuan` | String | Opsional* | Nama lokasi tujuan (wajib jika tidak ada `id_tujuan`) |
 | `jam` | String | Opsional | Format `HH:MM` (contoh: `08:30`). Memfilter jadwal yang sedang aktif beroperasi. |
-
-#### Contoh Request:
-```http
-GET /api/transport/tarif?id_asal=1&id_tujuan=2&jam=09:00 HTTP/1.1
-Host: localhost:8080
-X-API-KEY: public-transport-read-2026
-```
 
 #### Response Sukses (200 OK):
 ```json
@@ -210,46 +221,28 @@ X-API-KEY: public-transport-read-2026
 ---
 
 ### 4.4. GET/POST `/api/transport/rekomendasi-wisata`
-Endpoint pintar yang merekomendasikan rute multi-moda lengkap dari posisi user menuju lokasi wisata (difokuskan pada pariwisata Sumatera Utara / Danau Toba).
+Endpoint cerdas yang merekomendasikan rute multi-moda lengkap dari posisi GPS pengguna menuju objek wisata (difokuskan pada pariwisata Sumatera Utara / Danau Toba).
 
 #### Alur Logika Sistem:
-1. **Deteksi Pengguna di Luar Sumut**:
-   - Jika pengguna berada di luar wilayah koordinat Sumut (misal Jakarta, Surabaya, dll.), sistem otomatis memilihkan **bandara keberangkatan terdekat dari GPS user**.
-   - Sistem menentukan bandara kedatangan gerbang Sumut (Kualanamu `KNO` atau Silangit `DTB`) yang paling dekat dengan objek wisata dan memiliki penerbangan langsung.
-   - **Leg 1**: Penerbangan ke Sumut.
-   - **Leg 2**: Transportasi darat lanjutan (KA / Bus / Shuttle) menuju titik simpul terdekat dari objek wisata.
+1. **Deteksi Pengguna di Luar Sumut** (`lat < 0.5 || lat > 4.3 || lng < 97.0 || lng > 100.5`):
+   - Memilih bandara keberangkatan terdekat dari GPS user.
+   - Menentukan bandara gerbang Sumut (`KNO` atau `DTB` Silangit) yang terdekat dengan objek wisata dan memiliki jadwal penerbangan.
+   - **Segmen 1**: Penerbangan ke Sumut.
+   - **Segmen 2**: Transportasi darat lanjutan menuju titik simpul terdekat objek wisata.
 2. **Deteksi Pengguna di Dalam Sumut**:
-   - Sistem memilih stasiun / terminal terdekat dari GPS user, lalu merutekan perjalanan darat langsung ke titik terdekat objek wisata.
+   - Memilih stasiun/terminal terdekat dari GPS user, lalu merutekan perjalanan darat langsung ke titik terdekat objek wisata.
 3. **Kalkulasi Trip Type**:
-   - Mendukung opsi `roundtrip` (Pulang-Pergi / default) dan `oneway` (Sekali Jalan).
+   - Mendukung `roundtrip` (Pulang-Pergi / default) dan `oneway` (Sekali Jalan).
 
-#### Parameter:
-Dapat dikirim melalui **Query String** (pada `GET`) atau **JSON Body** (pada `POST`):
+#### Parameter (`GET` Query String atau `POST` JSON Body):
 | Parameter | Tipe | Wajib | Keterangan |
 | :--- | :--- | :--- | :--- |
 | `user_lat` | Float | Ya | Latitude GPS posisi pengguna (contoh: `-6.2088`) |
 | `user_lng` | Float | Ya | Longitude GPS posisi pengguna (contoh: `106.8456`) |
 | `wisata_lat`| Float | Ya | Latitude lokasi objek wisata (contoh: `2.6136`) |
 | `wisata_lng`| Float | Ya | Longitude lokasi objek wisata (contoh: `98.9083`) |
-| `nama_wisata`| String | Tidak | Nama destinasi (contoh: `Danau Toba / Parapat`) |
-| `trip_type` | String | Tidak | Opsi: `'roundtrip'` (default) atau `'oneway'` |
-
-#### Contoh Request:
-```http
-POST /api/transport/rekomendasi-wisata HTTP/1.1
-Host: localhost:8080
-X-API-KEY: public-transport-read-2026
-Content-Type: application/json
-
-{
-  "user_lat": -6.2088,
-  "user_lng": 106.8456,
-  "wisata_lat": 2.6136,
-  "wisata_lng": 98.9083,
-  "nama_wisata": "Danau Toba Parapat",
-  "trip_type": "roundtrip"
-}
-```
+| `nama_wisata`| String | Tidak | Nama destinasi (default: `'Destinasi Wisata'`) |
+| `trip_type` | String | Tidak | `'roundtrip'` (default) atau `'oneway'` |
 
 #### Response Sukses (200 OK):
 ```json
@@ -285,7 +278,7 @@ Content-Type: application/json
         {
           "segmen": 1,
           "jenis_segmen": "Penerbangan",
-          "deskripsi": "Penerbangan dari bandara terdekat user (Bandara Internasional Soekarno-Hatta) menuju gerbang Sumatera Utara (Bandara Internasional Silangit (DTB))",
+          "deskripsi": "Penerbangan dari bandara terdekat user menuju gerbang Sumatera Utara",
           "titik_berangkat": {
             "id": 9,
             "nama_lokasi": "Bandara Internasional Soekarno-Hatta (CGK)",
@@ -312,39 +305,11 @@ Content-Type: application/json
               "estimasi_tarif_format": "Rp 950.000"
             }
           ]
-        },
-        {
-          "segmen": 2,
-          "jenis_segmen": "Transportasi Darat",
-          "deskripsi": "Perjalanan darat dari bandara kedatangan menuju titik transportasi terdekat dari objek wisata",
-          "titik_berangkat": { "id": 8, "nama_lokasi": "Bandara Internasional Silangit (DTB)" },
-          "titik_tiba": { "id": 14, "nama_lokasi": "Terminal Sosor Saba Parapat" },
-          "jarak_km": 72.3,
-          "jarak_ke_lokasi_wisata_km": 1.5,
-          "tarif_termurah": 100000,
-          "tarif_termurah_format": "Rp 100.000",
-          "opsi_armada": [
-            {
-              "id_jadwal": 22,
-              "penyedia": "Bus DAMRI Bandara Silangit - Parapat",
-              "jenis_transport": "Bus",
-              "jam_berlaku": "09:00 - 18:00",
-              "estimasi_tarif": 100000,
-              "estimasi_tarif_format": "Rp 100.000"
-            }
-          ]
         }
       ],
       "pulang": [
         {
           "segmen": 1,
-          "jenis_segmen": "Transportasi Darat",
-          "deskripsi": "Perjalanan pulang: Terminal Sosor Saba Parapat kembali menuju Bandara Internasional Silangit (DTB)",
-          "tarif_termurah": 100000,
-          "tarif_termurah_format": "Rp 100.000"
-        },
-        {
-          "segmen": 2,
           "jenis_segmen": "Penerbangan",
           "deskripsi": "Perjalanan pulang: Bandara Internasional Silangit (DTB) kembali menuju Bandara Internasional Soekarno-Hatta (CGK)",
           "tarif_termurah": 950000,
@@ -364,7 +329,7 @@ Content-Type: application/json
 > Operasi `POST`, `PUT`, `PATCH`, dan `DELETE` memerlukan `X-API-KEY` dengan nilai **Secret Key**.
 
 ### 5.1. Resource: Moda (`/api/moda`)
-Mengelola data moda transportasi (Pesawat, Kereta Api, Bus, Shuttle).
+Mengelola data moda transportasi (`transport`).
 
 | Method | Endpoint | Body (JSON) | Validasi | Response |
 | :--- | :--- | :--- | :--- | :--- |
@@ -372,34 +337,38 @@ Mengelola data moda transportasi (Pesawat, Kereta Api, Bus, Shuttle).
 | `GET` | `/api/moda/(:id)` | - | - | 200 OK / 404 Not Found |
 | `POST` | `/api/moda` | `{"jenis": "Kapal Feri"}` | `jenis`: required, 2-50 chars | 201 Created |
 | `PUT` | `/api/moda/(:id)` | `{"jenis": "Kapal Cepat"}` | `jenis`: min 2 chars | 200 OK |
-| `DELETE`| `/api/moda/(:id)` | - | Tidak boleh ada penyedia yang menggunakan | 200 OK / 409 Conflict |
+| `DELETE`| `/api/moda/(:id)` | - | Gagal jika dipakai penyedia | 200 OK / 409 Conflict |
 
 ---
 
 ### 5.2. Resource: Lokasi (`/api/lokasi`)
-Mengelola titik lokasi simpul transportasi (Bandara, Terminal, Stasiun).
+Mengelola titik lokasi simpul transportasi (`lokasi`).
 
-- **Skema Body**:
+- **Query Filter pada `GET /api/lokasi`**:
+  - `q` (opsional, string): Pencarian teks pada `nama_lokasi` (case-insensitive).
+  - `tipe` (opsional, string): Filter berdasarkan tipe (`bandara`, `stasiun`, `terminal`, `halte`, `pelabuhan`).
+- **Skema Body (`POST` / `PUT` / `PATCH`)**:
 ```json
 {
   "nama_lokasi": "Stasiun Tebing Tinggi",
+  "tipe_lokasi": "stasiun",
   "latitude": 3.3276,
   "longitude": 99.1625
 }
 ```
 
-| Method | Endpoint | Keterangan & Validasi | Status Sukses |
+| Method | Endpoint | Keterangan & Validasi | Status Sukses / Error |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/lokasi` | Menampilkan seluruh lokasi terurut nama A-Z | 200 OK |
+| `GET` | `/api/lokasi` | Menampilkan lokasi terurut `nama_lokasi` A-Z (dukung `?q=` & `?tipe=`) | 200 OK |
 | `GET` | `/api/lokasi/(:id)` | Detail lokasi berdasarkan ID | 200 OK / 404 |
-| `POST` | `/api/lokasi` | `nama_lokasi` (2-100 char), `latitude` (decimal), `longitude` (decimal) | 201 Created |
-| `PUT` | `/api/lokasi/(:id)` | Memperbarui nama atau koordinat lokasi | 200 OK |
-| `DELETE`| `/api/lokasi/(:id)` | Hapus lokasi (gagal 409 jika terhubung ke jadwal) | 200 OK |
+| `POST` | `/api/lokasi` | `nama_lokasi` (2-100 char), `latitude` (decimal), `longitude` (decimal), `tipe_lokasi` (opsional, default `'terminal'`) | 201 Created |
+| `PUT` | `/api/lokasi/(:id)` | Memperbarui nama, tipe, atau koordinat lokasi | 200 OK / 404 |
+| `DELETE`| `/api/lokasi/(:id)` | Cek relasi ke `jadwal` (`id_lokasi_asal` / `id_lokasi_tujuan`) | 200 OK / 409 Conflict |
 
 ---
 
 ### 5.3. Resource: Penyedia (`/api/penyedia`)
-Mengelola data operator atau perusahaan penyedia layanan transportasi (PT KAI, Garuda Indonesia, DAMRI, dll.).
+Mengelola data operator atau perusahaan penyedia layanan transportasi (`penyedia`).
 
 - **Skema Body**:
 ```json
@@ -411,18 +380,18 @@ Mengelola data operator atau perusahaan penyedia layanan transportasi (PT KAI, G
 }
 ```
 
-| Method | Endpoint | Keterangan & Validasi | Status Sukses |
+| Method | Endpoint | Keterangan & Validasi | Status Sukses / Error |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/penyedia` | Otomatis me-join nama jenis moda transportasi | 200 OK |
+| `GET` | `/api/penyedia` | Otomatis join `jenis_transport` dari tabel `transport` | 200 OK |
 | `GET` | `/api/penyedia/(:id)` | Detail penyedia armada | 200 OK / 404 |
-| `POST` | `/api/penyedia` | `id_transport` (valid ID di tabel transport), `nama_penyedia` (2-150 char) | 201 Created |
-| `PUT` | `/api/penyedia/(:id)` | Update info penyedia armada | 200 OK |
-| `DELETE`| `/api/penyedia/(:id)` | Hapus data penyedia (gagal 409 jika terhubung jadwal) | 200 OK |
+| `POST` | `/api/penyedia` | `id_transport` (valid ID di tabel `transport`), `nama_penyedia` (2-150 char) | 201 Created |
+| `PUT` | `/api/penyedia/(:id)` | Update info penyedia armada | 200 OK / 404 |
+| `DELETE`| `/api/penyedia/(:id)` | Gagal 409 jika masih terhubung ke jadwal | 200 OK / 409 Conflict |
 
 ---
 
 ### 5.4. Resource: Jadwal (`/api/jadwal`)
-Mengelola jadwal operasional rute dan tarif per km.
+Mengelola jadwal operasional rute dan tarif per km (`jadwal`).
 
 - **Skema Body**:
 ```json
@@ -436,73 +405,81 @@ Mengelola jadwal operasional rute dan tarif per km.
 }
 ```
 
-| Method | Endpoint | Keterangan & Validasi | Status Sukses |
+| Method | Endpoint | Keterangan & Validasi | Status Sukses / Error |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/jadwal` | Menampilkan jadwal lengkap join penyedia & lokasi rute | 200 OK |
 | `GET` | `/api/jadwal/(:id)` | Detail 1 jadwal | 200 OK / 404 |
 | `POST` | `/api/jadwal` | Validasi: `id_penyedia`, `id_lokasi_asal` != `id_lokasi_tujuan`, `tarif_per_km` | 201 Created |
-| `PUT` | `/api/jadwal/(:id)` | Update jadwal operasional atau tarif per km | 200 OK |
-| `DELETE`| `/api/jadwal/(:id)` | Hapus jadwal | 200 OK |
+| `PUT` | `/api/jadwal/(:id)` | Update jadwal operasional atau tarif per km | 200 OK / 404 |
+| `DELETE`| `/api/jadwal/(:id)` | Hapus jadwal | 200 OK / 404 |
 
 ---
 
-## 6. Contoh Pemanggilan Klien
+## 6. Spesifikasi Frontend Proxy (`/app-api/*`)
 
-### 6.1. cURL
+Endpoint ini berjalan di domain utama aplikasi web untuk dikonsumsi langsung oleh JavaScript di halaman frontend tanpa mengekspos API Key rahasia ke browser.
+
+### 6.1. Wisata JejakSumut (`/app-api/wisata/*`)
+- **`GET /app-api/wisata/destinasi`**
+  - Query params opsional yang diteruskan: `kota`, `kategori`, `kode_kabupaten`, `harga_maksimal`, `kata_kunci`, `urutan`, `halaman`, `batas`.
+- **`GET /app-api/wisata/destinasi/(:segment)`**
+  - Mengambil detail destinasi berdasarkan slug.
+- **`GET /app-api/wisata/kategori`**
+  - Mengambil daftar kategori wisata.
+- **`GET /app-api/wisata/kabupaten-kota`**
+  - Mengambil daftar kabupaten/kota dari API JejakSumut.
+
+### 6.2. Transportasi Internal (`/app-api/transport/*`)
+- **`GET /app-api/transport/transports`** → Proxy ke `GET /api/transport/transports`
+- **`GET /app-api/transport/lokasi`** → Proxy ke `GET /api/transport/lokasi`
+- **`GET /app-api/transport/tarif`** → Proxy ke `GET /api/transport/tarif` (query: `id_asal`, `id_tujuan`, `asal`, `tujuan`, `jam`)
+- **`GET /app-api/transport/rekomendasi-wisata`** → Proxy ke `GET /api/transport/rekomendasi-wisata` (query: `user_lat`, `user_lng`, `wisata_lat`, `wisata_lng`, `nama_wisata`, `trip_type`)
+
+---
+
+## 7. Contoh Pemanggilan Klien
+
+### 7.1. cURL
 
 ```bash
-# 1. Mengambil Lokasi (Public Key)
-curl -X GET "http://localhost:8080/api/transport/lokasi" \
+# 1. Mengambil Lokasi dengan filter tipe (Public Key)
+curl -X GET "http://127.0.0.1:8082/api/lokasi?tipe=bandara" \
   -H "X-API-KEY: public-transport-read-2026" \
   -H "Accept: application/json"
 
 # 2. Cek Tarif dengan Jam Berangkat (Public Key)
-curl -X GET "http://localhost:8080/api/transport/tarif?id_asal=1&id_tujuan=2&jam=08:30" \
+curl -X GET "http://127.0.0.1:8082/api/transport/tarif?id_asal=1&id_tujuan=2&jam=08:30" \
   -H "X-API-KEY: public-transport-read-2026" \
   -H "Accept: application/json"
 
-# 3. Menambahkan Lokasi Baru (Wajib Secret Key)
-curl -X POST "http://localhost:8080/api/lokasi" \
+# 3. Menambahkan Lokasi Baru lengkap dengan tipe_lokasi (Wajib Secret Key)
+curl -X POST "http://127.0.0.1:8082/api/lokasi" \
   -H "X-API-KEY: secret-transport-admin-9f8a7b6c" \
   -H "Content-Type: application/json" \
-  -d '{"nama_lokasi": "Terminal Amplas Medan", "latitude": 3.5353, "longitude": 98.7058}'
+  -d '{"nama_lokasi": "Terminal Amplas Medan", "tipe_lokasi": "terminal", "latitude": 3.5353, "longitude": 98.7058}'
 ```
 
-### 6.2. JavaScript (Fetch API)
+### 7.2. JavaScript (Fetch API via Frontend Proxy)
 
 ```javascript
-const BASE_URL = 'http://localhost:8080/api';
-const API_KEY_PUBLIC = 'public-transport-read-2026';
+// Memanggil melalui /app-api agar tidak perlu menyertakan X-API-KEY di browser
+async function cekRekomendasiWisata(userCoords, wisataCoords, namaDestinasi) {
+  const params = new URLSearchParams({
+    user_lat: userCoords.latitude,
+    user_lng: userCoords.longitude,
+    wisata_lat: wisataCoords.latitude,
+    wisata_lng: wisataCoords.longitude,
+    nama_wisata: namaDestinasi,
+    trip_type: 'roundtrip'
+  });
 
-// Permintaan Rekomendasi Wisata
-async function dapatkanRekomendasiWisata(userCoords, wisataCoords, namaDestinasi) {
-  try {
-    const response = await fetch(`${BASE_URL}/transport/rekomendasi-wisata`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-KEY': API_KEY_PUBLIC,
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        user_lat: userCoords.latitude,
-        user_lng: userCoords.longitude,
-        wisata_lat: wisataCoords.latitude,
-        wisata_lng: wisataCoords.longitude,
-        nama_wisata: namaDestinasi,
-        trip_type: 'roundtrip'
-      })
-    });
+  const response = await fetch(`/app-api/transport/rekomendasi-wisata?${params}`);
+  const result = await response.json();
 
-    const data = await response.json();
-    if (response.ok) {
-      console.log('Estimasi Biaya PP:', data.data.ringkasan_biaya.total_biaya_format);
-      console.log('Detail Rute:', data.data.rute_perjalanan);
-    } else {
-      console.error('API Error:', data.message || data.messages);
-    }
-  } catch (error) {
-    console.error('Koneksi Gagal:', error);
+  if (response.ok) {
+    console.log('Estimasi Biaya PP:', result.data.ringkasan_biaya.total_biaya_format);
+  } else {
+    console.error('Error:', result.message || result.messages);
   }
 }
 ```
