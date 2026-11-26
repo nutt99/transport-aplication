@@ -15,9 +15,44 @@ class Lokasi extends ResourceController
     // GET /api/lokasi
     public function index()
     {
+        $q    = trim((string) $this->request->getGet('q'));
+        $tipe = trim((string) $this->request->getGet('tipe'));
+
+        $builder = $this->model->orderBy('nama_lokasi', 'ASC');
+
+        if (!empty($q)) {
+            $escaped = $this->model->db->escapeLikeString(strtolower($q));
+            $builder->where("LOWER(nama_lokasi) LIKE '%" . $escaped . "%'");
+        }
+
+        if (!empty($tipe)) {
+            $hasCol = $this->model->db->fieldExists('tipe_lokasi', 'lokasi');
+            $t = strtolower($tipe);
+
+            $builder->groupStart();
+            if ($hasCol) {
+                $builder->where('tipe_lokasi', $t);
+            }
+
+            if ($t === 'bandara') {
+                $builder->orWhere("LOWER(nama_lokasi) LIKE '%bandara%'")
+                        ->orWhere("LOWER(nama_lokasi) LIKE '%airport%'");
+            } elseif ($t === 'stasiun') {
+                $builder->orWhere("LOWER(nama_lokasi) LIKE '%stasiun%'");
+            } elseif ($t === 'halte') {
+                $builder->orWhere("LOWER(nama_lokasi) LIKE '%halte%'");
+            } elseif ($t === 'pelabuhan') {
+                $builder->orWhere("LOWER(nama_lokasi) LIKE '%pelabuhan%'")
+                        ->orWhere("LOWER(nama_lokasi) LIKE '%dermaga%'");
+            } elseif ($t === 'terminal') {
+                $builder->orWhere("LOWER(nama_lokasi) LIKE '%terminal%'");
+            }
+            $builder->groupEnd();
+        }
+
         return $this->respond([
             'status' => 'success',
-            'data'   => $this->model->orderBy('nama_lokasi', 'ASC')->findAll(),
+            'data'   => $builder->findAll(),
         ]);
     }
 
@@ -39,10 +74,14 @@ class Lokasi extends ResourceController
     public function create()
     {
         $input = $this->request->getJSON(true) ?: $this->request->getPost();
-        $data  = array_intersect_key($input ?? [], array_flip(['nama_lokasi', 'latitude', 'longitude']));
+        $data  = array_intersect_key($input ?? [], array_flip(['nama_lokasi', 'tipe_lokasi', 'latitude', 'longitude']));
 
         if (empty($data)) {
             return $this->failValidationErrors('Body request tidak boleh kosong.');
+        }
+
+        if (empty($data['tipe_lokasi'])) {
+            $data['tipe_lokasi'] = 'terminal';
         }
 
         $id = $this->model->insert($data);
@@ -65,7 +104,7 @@ class Lokasi extends ResourceController
         }
 
         $input = $this->request->getJSON(true) ?: $this->request->getRawInput();
-        $data  = array_intersect_key($input ?? [], array_flip(['nama_lokasi', 'latitude', 'longitude']));
+        $data  = array_intersect_key($input ?? [], array_flip(['nama_lokasi', 'tipe_lokasi', 'latitude', 'longitude']));
 
         if (empty($data)) {
             return $this->failValidationErrors('Tidak ada field valid yang dikirim untuk diperbarui.');
@@ -91,6 +130,17 @@ class Lokasi extends ResourceController
     {
         if (!$this->model->find($id)) {
             return $this->failNotFound('Data lokasi/lokasi tidak ditemukan.');
+        }
+
+        // Cek apakah lokasi masih digunakan pada jadwal aktif
+        $jadwalModel = new \App\Models\JadwalModel();
+        $terpakai = $jadwalModel
+            ->where('id_lokasi_asal', $id)
+            ->orWhere('id_lokasi_tujuan', $id)
+            ->countAllResults();
+
+        if ($terpakai > 0) {
+            return $this->fail("Lokasi ini tidak bisa dihapus karena masih digunakan pada {$terpakai} jadwal rute aktif.", 409);
         }
 
         try {

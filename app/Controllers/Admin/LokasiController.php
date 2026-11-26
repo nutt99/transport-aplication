@@ -3,63 +3,46 @@
 namespace App\Controllers\Admin;
 
 use App\Controllers\BaseController;
-use App\Models\LokasiModel;
-use App\Models\JadwalModel;
+use App\Libraries\ApiClient;
 
 class LokasiController extends BaseController
 {
-    protected LokasiModel $lokasiModel;
-    protected JadwalModel $jadwalModel;
+    protected ApiClient $apiClient;
 
     public function __construct()
     {
-        $this->lokasiModel = new LokasiModel();
-        $this->jadwalModel = new JadwalModel();
+        $this->apiClient = new ApiClient();
     }
 
+    /**
+     * GET /admin/lokasi
+     * Mengambil daftar lokasi melalui REST API (/api/lokasi)
+     */
     public function index()
     {
         $q    = trim((string) $this->request->getGet('q'));
         $tipe = trim((string) $this->request->getGet('tipe'));
 
-        $builder = $this->lokasiModel->orderBy('id', 'DESC');
-
+        $query = [];
         if (!empty($q)) {
-            $escaped = $this->lokasiModel->db->escapeLikeString(strtolower($q));
-            $builder->where("LOWER(nama_lokasi) LIKE '%" . $escaped . "%'");
+            $query['q'] = $q;
         }
-
         if (!empty($tipe)) {
-            $hasCol = $this->lokasiModel->db->fieldExists('tipe_lokasi', 'lokasi');
-            $t = strtolower($tipe);
-
-            $builder->groupStart();
-            if ($hasCol) {
-                $builder->where('tipe_lokasi', $t);
-            }
-
-            if ($t === 'bandara') {
-                $builder->orWhere("LOWER(nama_lokasi) LIKE '%bandara%'")
-                        ->orWhere("LOWER(nama_lokasi) LIKE '%airport%'");
-            } elseif ($t === 'stasiun') {
-                $builder->orWhere("LOWER(nama_lokasi) LIKE '%stasiun%'");
-            } elseif ($t === 'halte') {
-                $builder->orWhere("LOWER(nama_lokasi) LIKE '%halte%'");
-            } elseif ($t === 'pelabuhan') {
-                $builder->orWhere("LOWER(nama_lokasi) LIKE '%pelabuhan%'")
-                        ->orWhere("LOWER(nama_lokasi) LIKE '%dermaga%'");
-            } elseif ($t === 'terminal') {
-                $builder->orWhere("LOWER(nama_lokasi) LIKE '%terminal%'");
-            }
-            $builder->groupEnd();
+            $query['tipe'] = $tipe;
         }
 
-        $lokasiList = $builder->findAll();
+        // 1. Panggil REST API: GET /api/lokasi (dengan parameter pencarian & filter)
+        $res = $this->apiClient->transport('GET', '/lokasi', $query);
+        $lokasiList = [];
+
+        if (isset($res['body']['data']) && is_array($res['body']['data'])) {
+            $lokasiList = $res['body']['data'];
+        }
 
         // Auto-assign tipe_lokasi untuk tampilan jika belum terisi di database
         foreach ($lokasiList as &$item) {
             if (empty($item['tipe_lokasi'])) {
-                $nama = strtolower($item['nama_lokasi']);
+                $nama = strtolower($item['nama_lokasi'] ?? '');
                 if (str_contains($nama, 'bandara') || str_contains($nama, 'airport')) {
                     $item['tipe_lokasi'] = 'bandara';
                 } elseif (str_contains($nama, 'stasiun')) {
@@ -77,8 +60,12 @@ class LokasiController extends BaseController
         }
         unset($item);
 
-        // Hitung statistik
-        $semua = $this->lokasiModel->findAll();
+        // 2. Ambil seluruh data lokasi via API untuk statistik lengkap
+        $allRes = $this->apiClient->transport('GET', '/lokasi');
+        $semua = (isset($allRes['body']['data']) && is_array($allRes['body']['data']))
+            ? $allRes['body']['data']
+            : $lokasiList;
+
         $stats = [
             'total'     => count($semua),
             'bandara'   => 0,
@@ -91,7 +78,7 @@ class LokasiController extends BaseController
         foreach ($semua as $s) {
             $t = $s['tipe_lokasi'] ?? '';
             if (empty($t)) {
-                $nama = strtolower($s['nama_lokasi']);
+                $nama = strtolower($s['nama_lokasi'] ?? '');
                 if (str_contains($nama, 'bandara')) $t = 'bandara';
                 elseif (str_contains($nama, 'stasiun')) $t = 'stasiun';
                 elseif (str_contains($nama, 'terminal')) $t = 'terminal';
@@ -114,6 +101,10 @@ class LokasiController extends BaseController
         ]);
     }
 
+    /**
+     * POST /admin/lokasi/simpan
+     * Menambahkan lokasi baru melalui REST API: POST /api/lokasi
+     */
     public function simpan()
     {
         $namaLokasi = trim((string) $this->request->getPost('nama_lokasi'));
@@ -129,32 +120,38 @@ class LokasiController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Format latitude dan longitude harus berupa angka desimal.');
         }
 
-        $data = [
+        $payload = [
             'nama_lokasi' => $namaLokasi,
-            'latitude'    => $latitude,
-            'longitude'   => $longitude,
+            'tipe_lokasi' => !empty($tipeLokasi) ? $tipeLokasi : 'terminal',
+            'latitude'    => (float) $latitude,
+            'longitude'   => (float) $longitude,
         ];
 
-        if ($this->lokasiModel->db->fieldExists('tipe_lokasi', 'lokasi')) {
-            $data['tipe_lokasi'] = !empty($tipeLokasi) ? $tipeLokasi : 'terminal';
+        // Panggil REST API dengan Secret Key (useSecret = true)
+        $res = $this->apiClient->transport('POST', '/lokasi', [], $payload, true);
+
+        if ($res['status'] >= 200 && $res['status'] < 300) {
+            return redirect()->to(base_url('admin/lokasi'))->with('success', "Titik lokasi \"{$namaLokasi}\" berhasil ditambahkan via API.");
         }
 
-        $insertId = $this->lokasiModel->insert($data);
-        if ($insertId === false) {
-            return redirect()->back()->withInput()->with('error', implode(', ', $this->lokasiModel->errors()));
+        $errorMsg = $res['body']['messages']['error'] 
+            ?? $res['body']['message'] 
+            ?? 'Gagal menambahkan lokasi melalui API.';
+
+        if (is_array($errorMsg)) {
+            $errorMsg = implode(', ', $errorMsg);
         }
 
-        return redirect()->to(base_url('admin/lokasi'))->with('success', "Titik lokasi \"{$namaLokasi}\" berhasil ditambahkan.");
+        return redirect()->back()->withInput()->with('error', $errorMsg);
     }
 
+    /**
+     * POST /admin/lokasi/update/{id}
+     * Memperbarui lokasi melalui REST API: PUT /api/lokasi/{id}
+     */
     public function update($id = null)
     {
         $id = (int) $id;
-        $existing = $this->lokasiModel->find($id);
-        if (!$existing) {
-            return redirect()->to(base_url('admin/lokasi'))->with('error', 'Data lokasi tidak ditemukan.');
-        }
-
         $namaLokasi = trim((string) $this->request->getPost('nama_lokasi'));
         $tipeLokasi = trim((string) $this->request->getPost('tipe_lokasi'));
         $latitude   = trim((string) $this->request->getPost('latitude'));
@@ -168,40 +165,54 @@ class LokasiController extends BaseController
             return redirect()->back()->withInput()->with('error', 'Format latitude dan longitude harus berupa angka desimal.');
         }
 
-        $data = [
+        $payload = [
             'nama_lokasi' => $namaLokasi,
-            'latitude'    => $latitude,
-            'longitude'   => $longitude,
+            'tipe_lokasi' => !empty($tipeLokasi) ? $tipeLokasi : 'terminal',
+            'latitude'    => (float) $latitude,
+            'longitude'   => (float) $longitude,
         ];
 
-        if ($this->lokasiModel->db->fieldExists('tipe_lokasi', 'lokasi')) {
-            $data['tipe_lokasi'] = !empty($tipeLokasi) ? $tipeLokasi : 'terminal';
+        // Panggil REST API dengan Secret Key (useSecret = true)
+        $res = $this->apiClient->transport('PUT', '/lokasi/' . $id, [], $payload, true);
+
+        if ($res['status'] >= 200 && $res['status'] < 300) {
+            return redirect()->to(base_url('admin/lokasi'))->with('success', "Data lokasi \"{$namaLokasi}\" berhasil diperbarui via API.");
         }
 
-        $this->lokasiModel->update($id, $data);
+        $errorMsg = $res['body']['messages']['error'] 
+            ?? $res['body']['message'] 
+            ?? 'Gagal memperbarui data lokasi melalui API.';
 
-        return redirect()->to(base_url('admin/lokasi'))->with('success', "Data lokasi \"{$namaLokasi}\" berhasil diperbarui.");
+        if (is_array($errorMsg)) {
+            $errorMsg = implode(', ', $errorMsg);
+        }
+
+        return redirect()->back()->withInput()->with('error', $errorMsg);
     }
 
+    /**
+     * POST /admin/lokasi/hapus/{id}
+     * Menghapus lokasi melalui REST API: DELETE /api/lokasi/{id}
+     */
     public function hapus($id = null)
     {
         $id = (int) $id;
-        $existing = $this->lokasiModel->find($id);
-        if (!$existing) {
-            return redirect()->to(base_url('admin/lokasi'))->with('error', 'Data lokasi tidak ditemukan.');
+
+        // Panggil REST API dengan Secret Key (useSecret = true)
+        $res = $this->apiClient->transport('DELETE', '/lokasi/' . $id, [], null, true);
+
+        if ($res['status'] >= 200 && $res['status'] < 300) {
+            return redirect()->to(base_url('admin/lokasi'))->with('success', "Titik lokasi berhasil dihapus via API.");
         }
 
-        // Cek relasi ke jadwal (kolom id_lokasi_asal dan id_lokasi_tujuan)
-        $terpakai = $this->jadwalModel
-            ->where('id_lokasi_asal', $id)
-            ->orWhere('id_lokasi_tujuan', $id)
-            ->countAllResults();
-        if ($terpakai > 0) {
-            return redirect()->to(base_url('admin/lokasi'))->with('error', "Lokasi \"{$existing['nama_lokasi']}\" sedang digunakan pada {$terpakai} jadwal rute aktif. Hapus atau alihkan jadwal rute terlebih dahulu.");
+        $errorMsg = $res['body']['messages']['error'] 
+            ?? $res['body']['message'] 
+            ?? 'Gagal menghapus lokasi melalui API.';
+
+        if (is_array($errorMsg)) {
+            $errorMsg = implode(', ', $errorMsg);
         }
 
-        $this->lokasiModel->delete($id);
-
-        return redirect()->to(base_url('admin/lokasi'))->with('success', "Lokasi \"{$existing['nama_lokasi']}\" berhasil dihapus.");
+        return redirect()->back()->withInput()->with('error', $errorMsg);
     }
 }
