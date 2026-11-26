@@ -35,11 +35,16 @@
             <div class="landing-overlay"></div>
 
             <div class="landing-content">
-                <button type="button" id="btn-open-origin-modal" class="location-pill">
-                    <span class="location-dot"></span>
-                    <span id="landing-origin-label">Medan, Sumatera Utara</span>
-                    <span class="pill-caret">▾</span>
-                </button>
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 480px; margin: 0 auto 1rem;">
+                    <button type="button" id="btn-open-origin-modal" class="location-pill" style="margin-bottom: 0;">
+                        <span class="location-dot"></span>
+                        <span id="landing-origin-label">Medan, Sumatera Utara</span>
+                        <span class="pill-caret">▾</span>
+                    </button>
+                    <a href="<?= base_url('admin') ?>" style="background: rgba(15, 31, 51, 0.8); color: #fff; backdrop-filter: blur(8px); padding: 0.45rem 0.85rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 600; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); display: inline-flex; align-items: center; gap: 0.35rem; transition: background 0.2s;" title="Kelola Titik Transportasi">
+                        ⚙️ Admin
+                    </a>
+                </div>
 
                 <div class="landing-bottom">
                     <h1 class="landing-title">Mau Kemana?</h1>

@@ -14,6 +14,7 @@ class LokasiModel extends Model
     protected $protectFields    = true;
     protected $allowedFields    = [
         'nama_lokasi',
+        'tipe_lokasi',
         'latitude',
         'longitude',
         'created_at',

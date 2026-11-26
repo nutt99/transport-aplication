@@ -45,3 +45,21 @@ $routes->group('api', [
     $routes->resource('penyedia', ['controller' => 'Penyedia']);
     $routes->resource('jadwal', ['controller' => 'Jadwal']);
 });
+
+// ==================== PANEL ADMIN ====================
+$routes->group('admin', static function ($routes) {
+    $routes->get('/', static function () {
+        return redirect()->to(base_url('admin/lokasi'));
+    });
+
+    $routes->get('login', 'Admin\AuthController::login');
+    $routes->post('login', 'Admin\AuthController::loginProcess');
+    $routes->get('logout', 'Admin\AuthController::logout');
+
+    $routes->group('lokasi', ['filter' => 'adminauth'], static function ($routes) {
+        $routes->get('/', 'Admin\LokasiController::index');
+        $routes->post('simpan', 'Admin\LokasiController::simpan');
+        $routes->post('update/(:num)', 'Admin\LokasiController::update/$1');
+        $routes->post('hapus/(:num)', 'Admin\LokasiController::hapus/$1');
+    });
+});
