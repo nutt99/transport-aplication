@@ -26,7 +26,12 @@ class Lokasi extends ResourceController
         }
 
         if (!empty($tipe)) {
-            $hasCol = $this->model->db->fieldExists('tipe_lokasi', 'lokasi');
+            $hasCol = false;
+            try {
+                $hasCol = $this->model->db->fieldExists('tipe_lokasi', 'lokasi');
+            } catch (\Throwable $e) {
+                $hasCol = false;
+            }
             $t = strtolower($tipe);
 
             $builder->groupStart();
@@ -70,6 +75,32 @@ class Lokasi extends ResourceController
         ]);
     }
 
+    /**
+     * Memastikan kolom tipe_lokasi ada di tabel lokasi; jika belum ada, coba tambahkan otomatis
+     * atau hilangkan dari array data jika database tidak memiliki kolom tersebut agar tidak error.
+     */
+    private function filterDataLokasi(array $data): array
+    {
+        if (array_key_exists('tipe_lokasi', $data)) {
+            $hasCol = false;
+            try {
+                $hasCol = $this->model->db->fieldExists('tipe_lokasi', 'lokasi');
+                if (!$hasCol) {
+                    $this->model->db->query("ALTER TABLE lokasi ADD COLUMN IF NOT EXISTS tipe_lokasi VARCHAR(30) DEFAULT 'terminal'");
+                    $hasCol = $this->model->db->fieldExists('tipe_lokasi', 'lokasi');
+                }
+            } catch (\Throwable $e) {
+                $hasCol = false;
+            }
+
+            if (!$hasCol) {
+                unset($data['tipe_lokasi']);
+            }
+        }
+
+        return $data;
+    }
+
     // POST /api/lokasi
     public function create()
     {
@@ -83,6 +114,8 @@ class Lokasi extends ResourceController
         if (empty($data['tipe_lokasi'])) {
             $data['tipe_lokasi'] = 'terminal';
         }
+
+        $data = $this->filterDataLokasi($data);
 
         $id = $this->model->insert($data);
         if ($id === false) {
@@ -109,6 +142,8 @@ class Lokasi extends ResourceController
         if (empty($data)) {
             return $this->failValidationErrors('Tidak ada field valid yang dikirim untuk diperbarui.');
         }
+
+        $data = $this->filterDataLokasi($data);
 
         try {
             if ($this->model->update($id, $data) === false) {
