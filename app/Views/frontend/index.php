@@ -176,7 +176,7 @@
                 </div>
 
                 <!-- Kalkulator Tarif Antar Simpul (Endpoint /api/transport/tarif) -->
-                <div class="section-block">
+                <!-- <div class="section-block">
                     <div class="section-head">
                         <h2 class="section-title">Cek Tarif Antar Simpul</h2>
                     </div>
@@ -202,7 +202,7 @@
                     </form>
 
                     <div id="tarif-results" class="segments-stack"></div>
-                </div>
+                </div> -->
 
                 <p class="disclaimer-text">
                     * Estimasi tarif dihitung otomatis dari jarak &amp; jadwal armada pada API Transportasi, sedangkan data destinasi bersumber dari API JejakSumut.
