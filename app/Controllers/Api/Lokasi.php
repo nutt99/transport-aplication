@@ -21,8 +21,7 @@ class Lokasi extends ResourceController
         $builder = $this->model->orderBy('nama_lokasi', 'ASC');
 
         if (!empty($q)) {
-            $escaped = $this->model->db->escapeLikeString(strtolower($q));
-            $builder->where("LOWER(nama_lokasi) LIKE '%" . $escaped . "%'");
+            $builder->like('nama_lokasi', $q, 'both', null, true);
         }
 
         if (!empty($tipe)) {
