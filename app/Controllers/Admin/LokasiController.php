@@ -25,14 +25,33 @@ class LokasiController extends BaseController
         $builder = $this->lokasiModel->orderBy('id', 'DESC');
 
         if (!empty($q)) {
-            $builder->like('nama_lokasi', $q);
+            $escaped = $this->lokasiModel->db->escapeLikeString(strtolower($q));
+            $builder->where("LOWER(nama_lokasi) LIKE '%" . $escaped . "%'");
         }
 
         if (!empty($tipe)) {
-            // Periksa jika tabel sudah ada tipe_lokasi
-            if ($this->lokasiModel->db->fieldExists('tipe_lokasi', 'lokasi')) {
-                $builder->where('tipe_lokasi', $tipe);
+            $hasCol = $this->lokasiModel->db->fieldExists('tipe_lokasi', 'lokasi');
+            $t = strtolower($tipe);
+
+            $builder->groupStart();
+            if ($hasCol) {
+                $builder->where('tipe_lokasi', $t);
             }
+
+            if ($t === 'bandara') {
+                $builder->orWhere("LOWER(nama_lokasi) LIKE '%bandara%'")
+                        ->orWhere("LOWER(nama_lokasi) LIKE '%airport%'");
+            } elseif ($t === 'stasiun') {
+                $builder->orWhere("LOWER(nama_lokasi) LIKE '%stasiun%'");
+            } elseif ($t === 'halte') {
+                $builder->orWhere("LOWER(nama_lokasi) LIKE '%halte%'");
+            } elseif ($t === 'pelabuhan') {
+                $builder->orWhere("LOWER(nama_lokasi) LIKE '%pelabuhan%'")
+                        ->orWhere("LOWER(nama_lokasi) LIKE '%dermaga%'");
+            } elseif ($t === 'terminal') {
+                $builder->orWhere("LOWER(nama_lokasi) LIKE '%terminal%'");
+            }
+            $builder->groupEnd();
         }
 
         $lokasiList = $builder->findAll();
@@ -172,8 +191,11 @@ class LokasiController extends BaseController
             return redirect()->to(base_url('admin/lokasi'))->with('error', 'Data lokasi tidak ditemukan.');
         }
 
-        // Cek relasi ke jadwal
-        $terpakai = $this->jadwalModel->where('asal_id', $id)->orWhere('tujuan_id', $id)->countAllResults();
+        // Cek relasi ke jadwal (kolom id_lokasi_asal dan id_lokasi_tujuan)
+        $terpakai = $this->jadwalModel
+            ->where('id_lokasi_asal', $id)
+            ->orWhere('id_lokasi_tujuan', $id)
+            ->countAllResults();
         if ($terpakai > 0) {
             return redirect()->to(base_url('admin/lokasi'))->with('error', "Lokasi \"{$existing['nama_lokasi']}\" sedang digunakan pada {$terpakai} jadwal rute aktif. Hapus atau alihkan jadwal rute terlebih dahulu.");
         }

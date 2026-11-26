@@ -560,7 +560,7 @@
         <section class="content-card">
             <!-- Toolbar -->
             <div class="toolbar">
-                <form action="<?= base_url('admin/lokasi') ?>" method="GET" class="toolbar-filter">
+                <form action="" method="GET" class="toolbar-filter">
                     <input 
                         type="search" 
                         name="q" 
@@ -578,7 +578,7 @@
                     </select>
                     <button type="submit" class="btn btn-outline btn-sm">Filter</button>
                     <?php if (!empty($q) || !empty($tipe)): ?>
-                        <a href="<?= base_url('admin/lokasi') ?>" class="btn btn-outline btn-sm" style="color: #f87171;">Reset</a>
+                        <a href="?" class="btn btn-outline btn-sm" style="color: #f87171;">Reset</a>
                     <?php endif; ?>
                 </form>
 
