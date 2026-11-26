@@ -62,4 +62,11 @@ $routes->group('admin', static function ($routes) {
         $routes->post('update/(:num)', 'Admin\LokasiController::update/$1');
         $routes->post('hapus/(:num)', 'Admin\LokasiController::hapus/$1');
     });
+
+    $routes->group('transport', ['filter' => 'adminauth'], static function ($routes) {
+        $routes->get('/', 'Admin\TransportController::index');
+        $routes->post('simpan', 'Admin\TransportController::simpan');
+        $routes->post('update/(:num)', 'Admin\TransportController::update/$1');
+        $routes->post('hapus/(:num)', 'Admin\TransportController::hapus/$1');
+    });
 });

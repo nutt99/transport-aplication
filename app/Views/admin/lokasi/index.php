@@ -501,10 +501,17 @@
 <body>
     <!-- Top Navbar -->
     <header class="navbar">
-        <a href="<?= base_url('admin/lokasi') ?>" class="navbar-brand">
-            <span>Mau Kemana?</span>
-            <span class="brand-badge">Admin Lokasi</span>
-        </a>
+        <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+            <a href="<?= base_url('admin/lokasi') ?>" class="navbar-brand">
+                <span>Mau Kemana?</span>
+                <span class="brand-badge">Admin Panel</span>
+            </a>
+
+            <nav style="display: flex; align-items: center; gap: 0.4rem;" aria-label="Menu Admin">
+                <a href="<?= base_url('admin/lokasi') ?>" style="text-decoration: none; color: #fff; background: rgba(37, 99, 235, 0.2); border: 1px solid rgba(37, 99, 235, 0.35); font-size: 0.875rem; font-weight: 500; padding: 0.4rem 0.75rem; border-radius: 0.45rem;">Lokasi</a>
+                <a href="<?= base_url('admin/transport') ?>" style="text-decoration: none; color: #9ca3af; font-size: 0.875rem; font-weight: 500; padding: 0.4rem 0.75rem; border-radius: 0.45rem;">Moda Transportasi</a>
+            </nav>
+        </div>
 
         <div class="navbar-actions">
             <span class="user-greeting">Halo, <strong><?= esc(session()->get('admin_username') ?? 'Admin') ?></strong></span>
