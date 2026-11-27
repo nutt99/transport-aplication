@@ -1,69 +1,115 @@
-# CodeIgniter 4 Application Starter
+# Transport Application — Backend & REST API Platform
 
-## What is CodeIgniter?
+Platform backend berbasis **CodeIgniter 4 (PHP)** yang menyediakan layanan web portal serta antarmuka **REST API** untuk sistem transportasi terintegrasi dan konektivitas pariwisata di Sumatera Utara.
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+Aplikasi ini mengintegrasikan data simpul transit (Bandara, Stasiun Kereta Api, Terminal Bus), jadwal operasional armada, perhitungan jarak & tarif otomatis, serta rekomendasi rute multi-moda cerdas yang terhubung dengan API pariwisata [JejakSumut](https://api-jejaksumut.vulnera.web.id).
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+---
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+## 📌 Fitur Utama
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+1. **Smart Multi-Moda Trip Recommendation (`/api/transport/rekomendasi-wisata`)**:
+   - Mendeteksi titik koordinat pengguna (apakah di dalam atau di luar wilayah Sumatera Utara).
+   - **Luar Sumut** (misal: Jakarta, Surabaya): Sistem secara otomatis mencarikan bandara terdekat pengguna $\rightarrow$ penerbangan ke gerbang Sumut (Bandara Kualanamu `KNO` atau Silangit `DTB`) $\rightarrow$ dilanjutkan transportasi darat (Kereta Api / Bus DAMRI / Shuttle) langsung ke lokasi wisata.
+   - **Dalam Sumut**: Merutekan langsung simpul stasiun/terminal terdekat menuju objek wisata.
+   - Menghitung estimasi rute **Pulang-Pergi (Roundtrip / PP)** atau **Sekali Jalan (Oneway)** lengkap dengan total biaya perjalanan termurah.
 
-## Installation & updates
+2. **Kalkulator Jarak & Tarif Antar Titik (`/api/transport/tarif`)**:
+   - Menghitung jarak geodesic antar simpul simetris (menggunakan formula *Haversine* berbasis koordinat latitude & longitude).
+   - Filter jam keberangkatan aktif (mencocokkan jadwal operasional armada).
+   - Mengurutkan pilihan armada secara otomatis dari estimasi tarif termurah.
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+3. **Master Data Transportasi (CRUD Resource)**:
+   - **Moda Transportasi**: Pesawat Terbang, Kereta Api, Bus, Shuttle.
+   - **Titik Lokasi Simpul**: Bandara Internasional Kualanamu, Bandara Internasional Silangit, Stasiun Medan, Terminal Sosor Saba Parapat, dll.
+   - **Penyedia Armada**: Garuda Indonesia, Batik Air, PT KAI, KA Bandara Railink, DAMRI, dll.
+   - **Jadwal & Tarif**: Tarif per kilometer dan rentang jam aktif operasional.
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+4. **Integrasi Data Pariwisata (Proxy JejakSumut)**:
+   - Katalog objek wisata alam, sejarah, budaya, dan religi di Sumatera Utara.
+   - Proxy aman untuk filter kategori, kabupaten/kota, dan harga tiket masuk.
 
-## Setup
+---
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+## 🛠️ Arsitektur & Teknologi
 
-## Important Change with index.php
+- **Framework**: CodeIgniter 4 (PHP 8.2+)
+- **Database**: PostgreSQL / MySQL
+- **Frontend Web**: HTML5, Modern CSS, Vanilla JS, & Leaflet.js Interactive Map
+- **Keamanan API**: API Key Authentication (`X-API-KEY`) & Cross-Origin Resource Sharing (CORS)
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+---
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+## 🔐 Autentikasi & Level Hak Akses API
 
-**Please** read the user guide for a better explanation of how CI4 works!
+Seluruh endpoint pada rute `/api/*` dilindungi oleh `ApiKeyFilter`. Setiap permintaan klien wajib menyertakan header `X-API-KEY`:
 
-## Repository Management
-
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
-
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
-
-## Server Requirements
-
-PHP version 8.2 or higher is required, with the following extensions installed:
-
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+| Tipe API Key | Default Header Value | Method Diizinkan | Penggunaan |
+| :--- | :--- | :--- | :--- |
+| **Public Key** | `public-transport-read-2026` | `GET` saja | Aplikasi Publik, Klien Mobile Android, Web Frontend |
+| **Secret Key** | `secret-transport-admin-9f8a7b6c` | `GET`, `POST`, `PUT`, `PATCH`, `DELETE` | Dashboard Admin & Manajemen Data |
 
 > [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - The end of life date for PHP 8.1 was December 31, 2025.
-> - If you are still using below PHP 8.2, you should upgrade immediately.
-> - The end of life date for PHP 8.2 will be December 31, 2026.
+> Permintaan non-`GET` (`POST`, `PUT`, `DELETE`) menggunakan **Public Key** akan langsung ditolak dengan respons status **403 Forbidden**.
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+---
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+## 🌐 Dokumentasi Endpoint REST API
+
+Dokumentasi spesifikasi lengkap payload dan format JSON dapat dibaca di [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
+
+### Ringkasan Rute Utama:
+* `GET  /api/transport/transports` — Daftar jenis moda transportasi.
+* `GET  /api/transport/lokasi` — Titik simpul transit terurut A-Z beserta koordinat GPS.
+* `GET  /api/transport/tarif?id_asal=...&id_tujuan=...&jam=08:30` — Hitung jarak & tarif armada aktif.
+* `POST /api/transport/rekomendasi-wisata` — Rekomendasi rute multi-moda dari GPS user ke objek wisata.
+* `GET  /api/moda`, `POST /api/moda`, `PUT /api/moda/(:id)`, `DELETE /api/moda/(:id)` — CRUD Moda.
+* `GET  /api/lokasi`, `POST /api/lokasi`, `PUT /api/lokasi/(:id)`, `DELETE /api/lokasi/(:id)` — CRUD Lokasi.
+* `GET  /api/penyedia`, `POST /api/penyedia`, `PUT /api/penyedia/(:id)`, `DELETE /api/penyedia/(:id)` — CRUD Penyedia.
+* `GET  /api/jadwal`, `POST /api/jadwal`, `PUT /api/jadwal/(:id)`, `DELETE /api/jadwal/(:id)` — CRUD Jadwal.
+
+---
+
+## 🚀 Panduan Menjalankan Server Lokal
+
+### 1. Kebutuhan Sistem
+* PHP 8.2 atau lebih baru (dengan ekstensi `intl`, `mbstring`, `curl`, `pdo_pgsql` atau `mysqli`).
+* PostgreSQL (default) atau MySQL.
+* Composer.
+
+### 2. Langkah Setup
+1. Masuk ke direktori:
+   ```bash
+   cd transport-aplication
+   ```
+2. Salin environment file dan sesuaikan kredensial database:
+   ```bash
+   cp env .env
+   ```
+3. Konfigurasi database di `.env`:
+   ```env
+   CI_ENVIRONMENT = development
+   database.default.hostname = 127.0.0.1
+   database.default.database = transport_aplication
+   database.default.username = postgres
+   database.default.password = postgres
+   database.default.DBDriver = Postgre
+   database.default.port = 5432
+   ```
+4. Jalankan migrasi dan seeder database:
+   ```bash
+   php spark migrate
+   php spark db:seed DatabaseSeeder
+   ```
+5. Nyalakan development server:
+   ```bash
+   php spark serve --port 8080
+   ```
+   Web portal dapat diakses di `http://localhost:8080` dan REST API di `http://localhost:8080/api`.
+
+---
+
+## 📱 Klien Terkait
+
+Aplikasi mobile Android yang terhubung ke backend ini tersedia di folder:
+* **[transport_aplication_android](../transport_aplication_android)** — Klien mobile berbasis Flutter.
